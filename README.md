@@ -2,6 +2,8 @@
 
 _A minimal autodiff package written in C._
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 You are on branch `dev-scalar`, which has a scalar implementation of autodiff.
 This is the earliest _dev_ branch of the package.
 
