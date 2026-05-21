@@ -7,7 +7,7 @@ This is the earliest _dev_ branch of the package.
 
 ## Example
 
-2D-regression,see `examples/01_regression_gd.ipynb`
+2D-regression,see [examples/01_regression_gd.ipynb](https://github.com/traikodinev/trexdiff/blob/dev-scalar/examples/01_regression_gd.ipynb)
 
 ```py
 N_iter = 500
