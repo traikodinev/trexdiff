@@ -74,6 +74,6 @@ make test
   author  = {Dinev, Traiko},
   title   = {trexdiff: A minimal automatic differentiation library in C},
   year    = {2026},
-  url     = {https://github.com/tdinev/trexdiff},
+  url     = {https://github.com/traikodinev/trexdiff},
 }
 ```
