@@ -64,3 +64,14 @@ pip install -e .
 ```sh
 make test
 ```
+
+## Citation
+
+```bibtex
+@software{dinev2026trexdiff,
+  author  = {Dinev, Traiko},
+  title   = {trexdiff: A minimal automatic differentiation library in C},
+  year    = {2026},
+  url     = {https://github.com/tdinev/trexdiff},
+}
+```
