@@ -30,9 +30,22 @@ Node* combine(Node* a, Node* b, OpType op_type) {
     node->inputs[1] = b;
 
     node->op_type = op_type;
+    node->visited = false;
     
     return node;
 }
+
+
+void reset_visited(Node *z) {
+    z->visited = false;
+
+    if (z -> input_count == 0)
+        return;
+
+    reset_visited(z->inputs[0]);
+    reset_visited(z->inputs[1]);
+}
+
 
 void zerograd(Node *z) {
     z->grad = 0.0;
@@ -45,12 +58,12 @@ void zerograd(Node *z) {
 }
 
 
-void forward(Node *z) {
-    if (z -> input_count == 0)
+static void _forward(Node* z) {
+    if (z -> input_count == 0 || z->visited)
         return;
 
-    forward(z->inputs[0]);
-    forward(z->inputs[1]);
+    _forward(z->inputs[0]);
+    _forward(z->inputs[1]);
     
     // TODO: use fwd_complete/bwd_complete to optimize passes
     // if (z->fwd_complete)
@@ -73,6 +86,14 @@ void forward(Node *z) {
             // no-op by default
             break;
     }
+
+    z->visited = true;
+}
+
+
+void forward(Node *z) {
+    reset_visited(z);
+    _forward(z);
 }
 
 

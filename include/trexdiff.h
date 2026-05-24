@@ -21,8 +21,7 @@ struct Node {
     double val;
     double grad; // dL/d_Node
 
-    bool fwd_complete; // forward pass completed
-    bool bwd_complete; // backward pass completed
+    bool visited; // node visted (in a pass regardless of direction)
 
     Node** inputs;
     short input_count;
@@ -45,6 +44,7 @@ static inline Node* mul(Node* a, Node* b) {
 
 
 void free_node(Node *n);
+void reset_visited(Node *z);
 void zerograd(Node *z);
 void forward(Node *z);
 void backward(Node *z, double partial);
