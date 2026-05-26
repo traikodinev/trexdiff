@@ -20,6 +20,10 @@ Node* init(double val) {
 
 void free_node(Node *n) {
     free(n->inputs);
+    if (n->topo_graph) {
+        free(n->topo_graph->graph);
+        free(n->topo_graph);
+    }
     free(n);
 }
 
