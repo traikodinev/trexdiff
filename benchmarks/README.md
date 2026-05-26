@@ -11,6 +11,9 @@ Large random DAG benchmark  (seed=11, N_LEAVES=10, N_OPS=50000, 500 repeats)
 0.0462 ms +- 0.0041 ms
 ```
 
-### - after toplogical sorting optimization
+### `24d4b28` - after toplogical sorting optimization
 
-
+```
+Large random DAG benchmark  (seed=11, N_LEAVES=10, N_OPS=50000, 500 repeats)
+0.0240 ms +- 0.0707 ms
+```
