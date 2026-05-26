@@ -17,11 +17,20 @@ typedef enum {
 
 // Reverse mode autodiff node
 typedef struct Node Node;
+
+// Node array - for graph representation
+typedef struct NodeArray {
+    Node** graph;
+    size_t size;
+} NodeArray;
+
+
 struct Node {
     double val;
     double grad; // dL/d_Node
 
     bool visited; // node visted (in a pass regardless of direction)
+    NodeArray* topo_graph;
 
     Node** inputs;
     short input_count;
@@ -45,6 +54,8 @@ static inline Node* mul(Node* a, Node* b) {
 
 void free_node(Node *n);
 void reset_visited(Node *z);
+int reset_and_count(Node *z);
+
 void zerograd(Node *z);
 void forward(Node *z);
 void backward(Node *z, double partial);

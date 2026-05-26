@@ -8,8 +8,12 @@ Node* init(double val) {
     Node* node = malloc(sizeof(Node));
     node->input_count = 0;
     node->inputs = NULL;
+    node->topo_graph = NULL;
     node->val = val;
     node->grad = 0.0;
+    node->op_type = OP_NOOP;
+    node->visited = false;
+
     return node;
 }
 
@@ -20,18 +24,18 @@ void free_node(Node *n) {
 }
 
 Node* combine(Node* a, Node* b, OpType op_type) {
-    Node* node = malloc(sizeof(Node));
+    Node* node = init(0.0);
     
     // adding 2 nodes means 2 inputs
     node->input_count = 2;
-    node->inputs = malloc(sizeof(Node) * 2);
+    node->inputs = malloc(sizeof(Node*) * 2);
 
     node->inputs[0] = a;
     node->inputs[1] = b;
 
     node->op_type = op_type;
     node->visited = false;
-    
+
     return node;
 }
 
@@ -44,6 +48,17 @@ void reset_visited(Node *z) {
 
     reset_visited(z->inputs[0]);
     reset_visited(z->inputs[1]);
+}
+
+
+int reset_and_count(Node *z) {
+    // TODO: This is not an exact node count due to multiple visits 
+    z->visited = false;
+
+    if (z->input_count == 0)
+        return 1;
+
+    return 1 + reset_and_count(z->inputs[0]) + reset_and_count(z->inputs[1]);
 }
 
 
@@ -97,31 +112,65 @@ void forward(Node *z) {
 }
 
 
-void backward(Node *z, double partial) {
-    z->grad += partial;
+static inline void _backward(Node *start, double partial) {
+    Node* z;
+    start->grad += partial;
 
-    if (z->input_count == 0)
+    for (size_t i = start->topo_graph->size - 1; i > 0; --i) {
+        z = start->topo_graph->graph[i];
+        
+        switch (z->op_type) {
+            case OP_ADD:
+                z->inputs[0]->grad += z->grad;
+                z->inputs[1]->grad += z->grad;
+                break;
+            case OP_MUL:
+                z->inputs[1]->grad += z->grad * z->inputs[0]->val;
+                z->inputs[0]->grad += z->grad * z->inputs[1]->val;
+                break;
+            case OP_SUB:
+                z->inputs[0]->grad += z->grad;
+                z->inputs[1]->grad += -z->grad;
+                break;
+            case OP_NOOP:
+            default:
+                // no-op
+                break;
+        }
+    }
+}
+
+
+static void _topo_sort(Node *z, NodeArray* topo_graph) {
+    // TODO: cycle detection
+    if (z->visited)
         return;
 
-    // TODO: toplogical sort instead of recursion
-    switch (z->op_type) {
-        case OP_ADD:
-            backward(z->inputs[0], partial);
-            backward(z->inputs[1], partial);
-            break;
-        case OP_MUL:
-            backward(z->inputs[1], partial * z->inputs[0]->val);
-            backward(z->inputs[0], partial * z->inputs[1]->val);
-            break;
-        case OP_SUB:
-            backward(z->inputs[0], partial);
-            backward(z->inputs[1], -partial);
-            break;
-        case OP_NOOP:
-        default:
-            // no-op
-            break;
+    if (z->inputs) {
+        _topo_sort(z->inputs[0], topo_graph);
+        _topo_sort(z->inputs[1], topo_graph);
     }
+
+    z->visited = true;
+    topo_graph->graph[topo_graph->size++] = z;
+}
+
+
+void backward(Node *z, double partial) {
+    if (z->topo_graph) {
+        _backward(z, partial);
+        return;
+    }
+
+    // TODO: We can optimize this by allowing calls to e.g. `compile`, a la Pytorch
+    //  instead of manually computing the topological sorting
+    size_t n_nodes = reset_and_count(z);
+    z->topo_graph = malloc(sizeof(NodeArray));
+    z->topo_graph->graph = malloc(sizeof(Node*) * n_nodes);
+    z->topo_graph->size = 0;
+
+    _topo_sort(z, z->topo_graph);
+    _backward(z, partial);
 }
 
 

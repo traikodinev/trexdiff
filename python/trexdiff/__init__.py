@@ -7,16 +7,24 @@ _lib = ctypes.CDLL(str(pathlib.Path(__file__).parent / "libtrexdiff.so"))
 class _Node(ctypes.Structure):
     pass
 
+class _NodeArray(ctypes.Structure):
+    pass
 
-# needs to be here due to _Node reference
+
+# forward-declared above so mutual pointers resolve
+_NodeArray._fields_ = [
+    ("graph", ctypes.POINTER(ctypes.POINTER(_Node))),
+    ("size",  ctypes.c_size_t),
+]
+
 _Node._fields_ = [
-    ("val",          ctypes.c_double),
-    ("grad",         ctypes.c_double),
-    ("fwd_complete", ctypes.c_bool),
-    ("bwd_complete", ctypes.c_bool),
-    ("inputs",       ctypes.POINTER(ctypes.POINTER(_Node))),
-    ("input_count",  ctypes.c_short),
-    ("op_type",      ctypes.c_int),
+    ("val",         ctypes.c_double),
+    ("grad",        ctypes.c_double),
+    ("visited",     ctypes.c_bool),
+    ("topo_graph",  ctypes.POINTER(_NodeArray)),
+    ("inputs",      ctypes.POINTER(ctypes.POINTER(_Node))),
+    ("input_count", ctypes.c_short),
+    ("op_type",     ctypes.c_int),
 ]
 
 
