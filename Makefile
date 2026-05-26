@@ -8,7 +8,9 @@ LIB_HDR  = include/trexdiff.h
 LIB_OBJ  = $(BUILD)/trexdiff.o
 LIB_SO   = $(BUILD)/libtrexdiff.so
 EXAMPLE  = $(BUILD)/example
-TEST_BIN = $(BUILD)/test_graph
+
+TEST_SRCS = tests/test_graph.c
+TEST_BINS = $(TEST_SRCS:tests/%.c=$(BUILD)/%)
 
 # Path inside the Python package where the ctypes loader expects the .so
 PY_SO   = python/trexdiff/libtrexdiff.so
@@ -36,10 +38,10 @@ python: $(PY_SO)
 $(PY_SO): $(LIB_SO)
 	cp $< $@
 
-test: $(TEST_BIN)
-	$(TEST_BIN)
+test: $(TEST_BINS)
+	@for t in $(TEST_BINS); do echo "--- $$t ---"; $$t || exit 1; done
 
-$(TEST_BIN): tests/test_graph.c $(LIB_OBJ) $(LIB_HDR) | $(BUILD)
+$(BUILD)/%: tests/%.c $(LIB_OBJ) $(LIB_HDR) | $(BUILD)
 	$(CC) $(CFLAGS) -Itests $< $(LIB_OBJ) -o $@ $(LDFLAGS)
 
 clean:

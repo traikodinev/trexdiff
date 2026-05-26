@@ -6,7 +6,6 @@
 int tests_run = 0;
 
 #define EPSILON 1e-4
-#define mu_assert_close(msg, a, b) mu_assert(msg, fabs((a) - (b)) < EPSILON)
 
 // Graph:
 //
