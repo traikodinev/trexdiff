@@ -11,6 +11,7 @@ Node* init(double val) {
     node->topo_graph = NULL;
     node->val = val;
     node->grad = 0.0;
+    node->partial = 0.0;
     node->op_type = OP_NOOP;
     node->visited = false;
 
@@ -26,6 +27,7 @@ void free_node(Node *n) {
     }
     free(n);
 }
+
 
 Node* combine(Node* a, Node* b, OpType op_type) {
     Node* node = init(0.0);
@@ -118,23 +120,30 @@ void forward(Node *z) {
 
 static inline void _backward(Node *start, double partial) {
     Node* z;
-    start->grad += partial;
 
-    for (size_t i = start->topo_graph->size - 1; i > 0; --i) {
+    for (int i = start->topo_graph->size - 1; i >= 0; --i)
+        start->topo_graph->graph[i]->partial = 0.0;
+
+    
+    start->partial = partial;
+    for (int i = start->topo_graph->size - 1; i >= 0; --i) {
         z = start->topo_graph->graph[i];
-        
+
+        // gradient accumulation
+        z->grad += z->partial;
+
         switch (z->op_type) {
             case OP_ADD:
-                z->inputs[0]->grad += z->grad;
-                z->inputs[1]->grad += z->grad;
+                z->inputs[0]->partial += z->partial;
+                z->inputs[1]->partial += z->partial;
                 break;
             case OP_MUL:
-                z->inputs[1]->grad += z->grad * z->inputs[0]->val;
-                z->inputs[0]->grad += z->grad * z->inputs[1]->val;
+                z->inputs[1]->partial += z->partial * z->inputs[0]->val;
+                z->inputs[0]->partial += z->partial * z->inputs[1]->val;
                 break;
             case OP_SUB:
-                z->inputs[0]->grad += z->grad;
-                z->inputs[1]->grad += -z->grad;
+                z->inputs[0]->partial += z->partial;
+                z->inputs[1]->partial += -z->partial;
                 break;
             case OP_NOOP:
             default:
@@ -184,13 +193,17 @@ double finite_diff(Node *input, Node *target) {
 
     // right side
     input->val = val + eps;
-    forward(target);
+    reset_visited(target);
+    input->visited = true; // stop at input
+    _forward(target);
     double grad_plus = target->val;
 
     input->val = val - eps;
-    forward(target);
+    reset_visited(target);
+    input->visited = true; // stop at input
+    _forward(target);
     double grad_minus = target->val;
-    
+
     // restore value
     input->val = val;
 

@@ -28,6 +28,8 @@ typedef struct NodeArray {
 struct Node {
     double val;
     double grad; // dL/d_Node
+    double partial; // partial accumulated in the current backward pass
+                    // this lets us call .backward multiple times to accumulate losses
 
     bool visited; // node visted (in a pass regardless of direction)
     NodeArray* topo_graph;
@@ -45,6 +47,10 @@ Node* combine(Node* a, Node* b, OpType op_type);
 
 static inline Node* add(Node* a, Node* b) {
     return combine(a, b, OP_ADD);
+}
+
+static inline Node* sub(Node* a, Node* b) {
+    return combine(a, b, OP_SUB);
 }
 
 static inline Node* mul(Node* a, Node* b) {
