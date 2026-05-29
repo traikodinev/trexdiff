@@ -109,6 +109,30 @@ static char *test_nonliear() {
 }
 
 
+static char *test_sigmoid() {
+    Node *x = init(1.5);
+    Node *a = init(2.0);
+    Node *b = init(0.5);
+    Node *scale = init(7.0);
+
+    // to avoid multiply-by-1 accidents
+    Node *loss = mul(scale, sigmoid(add(mul(a, x), b)));
+
+    forward(loss);
+    backward(loss, 1.0);
+
+    // printf("da=%f, actual=%f\n", a->grad, finite_diff(a, loss));
+
+    mu_assert_close("forward sigmoid", loss->val, 7.0 * 0.97068776924);
+    mu_assert_close("sigmmoid: da", a->grad, finite_diff(a, loss));
+    mu_assert_close("sigmoid: db", b->grad, finite_diff(b, loss));
+    mu_assert_close("sigmoid: dx", x->grad, finite_diff(x, loss));
+
+    free_node(loss);
+    return 0;    
+}
+
+
 
 static char *test_accumulation() {
     Node *x = init(1.5);
@@ -140,6 +164,7 @@ static char *all_tests(void) {
     mu_run_test(test_squared_loss);
     mu_run_test(test_accumulation);
     mu_run_test(test_nonliear);
+    mu_run_test(test_sigmoid);
     return 0;
 }
 

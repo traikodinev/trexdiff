@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
 #include "trexdiff.h"
 
 
@@ -119,6 +120,9 @@ static void _forward(Node* z) {
         case OP_RELU:
             z->val = z->inputs[0]->val < 0 ? 0 : z->inputs[0]->val;
             break;
+        case OP_SIGMOID:
+            // TODO: use SSE or AVX to optimize this
+            z->val = 1.0 / (1.0 + exp(-z->inputs[0]->val));
         case OP_NOOP:
         default:
             // no-op by default
@@ -164,6 +168,9 @@ static inline void _backward(Node *start, double partial) {
                 break;
             case OP_RELU:
                 z->inputs[0]->partial += z->inputs[0]->val <= 0 ? 0 : z->partial;
+                break;
+            case OP_SIGMOID:
+                z->inputs[0]->partial += z->partial * (z->val * (1.0 - z->val));
                 break;
             case OP_NOOP:
             default:

@@ -40,7 +40,7 @@ _lib.finite_diff.restype, _lib.finite_diff.argtypes = ctypes.c_double, [_P, _P]
 
 
 class Node:
-    _OP_ADD, _OP_SUB, _OP_MUL, _OP_DIV, _OP_RELU  = 0, 1, 2, 3, 4
+    _OP_ADD, _OP_SUB, _OP_MUL, _OP_DIV, _OP_RELU, _OP_SIG  = 1, 2, 3, 4, 5, 6
 
     def __init__(self, val):
         self._p = _lib.init(float(val))
@@ -92,14 +92,23 @@ class Node:
         return f"Node(val={self.val:.6f}, grad={self.grad:.6f})"
 
 
-def relu(node):
+def transform(node, op_code):
     n = Node.__new__(Node)
-    n._p = _lib.transform(node._p, Node._OP_RELU)
+    n._p = _lib.transform(node._p, op_code)
     n._inputs = (node,)
     return n
+
+
+def relu(node):
+    return transform(node, Node._OP_RELU)
+
+
+def sigmoid(node):
+    return transform(node, Node._OP_SIG)
 
 
 def finite_diff(inp, target):
     return _lib.finite_diff(inp._p, target._p)
 
-__all__ = ["Node", "finite_diff"]
+
+__all__ = ["Node", "finite_diff", "relu", "sigmoid"]

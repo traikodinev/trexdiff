@@ -6,12 +6,13 @@
 
 // op type
 typedef enum {
+    OP_NOOP,
     OP_ADD,
     OP_SUB,
     OP_MUL,
     OP_DIV,
     OP_RELU,
-    OP_NOOP
+    OP_SIGMOID
 } OpType;
 
 
@@ -61,6 +62,10 @@ static inline Node* mul(Node* a, Node* b) {
 
 static inline Node* relu(Node* a) {
     return transform(a, OP_RELU);
+}
+
+static inline Node* sigmoid(Node* a) {
+    return transform(a, OP_SIGMOID);
 }
 
 
