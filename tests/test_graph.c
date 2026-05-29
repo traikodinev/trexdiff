@@ -86,6 +86,30 @@ static char *test_squared_loss() {
 }
 
 
+static char *test_nonliear() {
+    Node *x = init(1.5);
+    Node *a = init(2.0);
+    Node *b = init(0.5);
+    Node *y = init(10.0);
+
+    Node *diff = sub(y, relu(add(mul(a, x), b)));
+    Node *loss = mul(diff, diff);
+
+    forward(loss);
+    backward(loss, 1.0);
+
+    mu_assert_close("nonlinear: da", a->grad, finite_diff(a, loss));
+    mu_assert_close("nonlinear: db", b->grad, finite_diff(b, loss));
+    mu_assert_close("nonlinear: dx", x->grad, finite_diff(x, loss));
+    mu_assert_close("nonlinear: dy", y->grad, finite_diff(y, loss));
+    mu_assert_close("nonliner: ddiff", diff->grad, finite_diff(diff, loss));
+
+    free_node(loss);
+    return 0;    
+}
+
+
+
 static char *test_accumulation() {
     Node *x = init(1.5);
     Node *a = init(2.0);
@@ -115,6 +139,7 @@ static char *all_tests(void) {
     mu_run_test(test_backward);
     mu_run_test(test_squared_loss);
     mu_run_test(test_accumulation);
+    mu_run_test(test_nonliear);
     return 0;
 }
 

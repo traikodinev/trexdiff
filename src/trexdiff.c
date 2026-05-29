@@ -40,7 +40,17 @@ Node* combine(Node* a, Node* b, OpType op_type) {
     node->inputs[1] = b;
 
     node->op_type = op_type;
-    node->visited = false;
+
+    return node;
+}
+
+
+Node* transform(Node *a, OpType op_type) {
+    Node* node = init(0.0);
+    node->input_count = 1;
+    node->inputs = malloc(sizeof(Node*));
+    node->inputs[0] = a;
+    node->op_type = op_type;
 
     return node;
 }
@@ -52,8 +62,8 @@ void reset_visited(Node *z) {
     if (z -> input_count == 0)
         return;
 
-    reset_visited(z->inputs[0]);
-    reset_visited(z->inputs[1]);
+    for (unsigned short i = 0; i < z->input_count; ++ i)
+        reset_visited(z->inputs[i]);
 }
 
 
@@ -64,7 +74,11 @@ int reset_and_count(Node *z) {
     if (z->input_count == 0)
         return 1;
 
-    return 1 + reset_and_count(z->inputs[0]) + reset_and_count(z->inputs[1]);
+    size_t count = 1;
+    for (unsigned short i = 0; i < z->input_count; ++ i)
+        count += reset_and_count(z->inputs[i]);
+
+    return count;
 }
 
 
@@ -74,8 +88,8 @@ void zerograd(Node *z) {
     if (z -> input_count == 0)
         return;
 
-    zerograd(z->inputs[0]);
-    zerograd(z->inputs[1]);
+    for (unsigned short i = 0; i < z->input_count; ++ i)
+        zerograd(z->inputs[i]);
 }
 
 
@@ -83,8 +97,8 @@ static void _forward(Node* z) {
     if (z -> input_count == 0 || z->visited)
         return;
 
-    _forward(z->inputs[0]);
-    _forward(z->inputs[1]);
+    for (unsigned short i = 0; i < z->input_count; ++ i)
+        _forward(z->inputs[i]);
     
     // TODO: use fwd_complete/bwd_complete to optimize passes
     // if (z->fwd_complete)
@@ -101,6 +115,9 @@ static void _forward(Node* z) {
             break;
         case OP_SUB:
             z->val = z->inputs[0]->val - z->inputs[1]->val;
+            break;
+        case OP_RELU:
+            z->val = z->inputs[0]->val < 0 ? 0 : z->inputs[0]->val;
             break;
         case OP_NOOP:
         default:
@@ -145,6 +162,9 @@ static inline void _backward(Node *start, double partial) {
                 z->inputs[0]->partial += z->partial;
                 z->inputs[1]->partial += -z->partial;
                 break;
+            case OP_RELU:
+                z->inputs[0]->partial += z->inputs[0]->val <= 0 ? 0 : z->partial;
+                break;
             case OP_NOOP:
             default:
                 // no-op
@@ -159,9 +179,9 @@ static void _topo_sort(Node *z, NodeArray* topo_graph) {
     if (z->visited)
         return;
 
-    if (z->inputs) {
-        _topo_sort(z->inputs[0], topo_graph);
-        _topo_sort(z->inputs[1], topo_graph);
+    if (z->input_count > 0) {
+        for (unsigned short i = 0; i < z->input_count; ++ i)
+            _topo_sort(z->inputs[i], topo_graph);
     }
 
     z->visited = true;

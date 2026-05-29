@@ -35,7 +35,7 @@ struct Node {
     NodeArray* topo_graph;
 
     Node** inputs;
-    short input_count;
+    unsigned short input_count;
 
     OpType op_type;
 };
@@ -44,6 +44,8 @@ struct Node {
 Node* init(double val);
 Node* combine(Node* a, Node* b, OpType op_type);
 
+// TODO: better representation of functionals
+Node *transform(Node *a, OpType op_type);
 
 static inline Node* add(Node* a, Node* b) {
     return combine(a, b, OP_ADD);
@@ -55,6 +57,10 @@ static inline Node* sub(Node* a, Node* b) {
 
 static inline Node* mul(Node* a, Node* b) {
     return combine(a, b, OP_MUL);
+}
+
+static inline Node* relu(Node* a) {
+    return transform(a, OP_RELU);
 }
 
 

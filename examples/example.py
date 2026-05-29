@@ -1,4 +1,4 @@
-from trexdiff import Node, finite_diff
+from trexdiff import Node, finite_diff, relu
 
 # More complex graph:
 #
@@ -19,7 +19,7 @@ mul1 = a * b           # a * b
 mul2 = c * d           # c * d
 add1 = c + d           # c + d
 add2 = mul1 + mul2     # (a*b) + (c*d)
-loss = add2 * add1     # ((a*b)+(c*d)) * (c+d)
+loss = relu(add2 * add1)     # ((a*b)+(c*d)) * (c+d)
 
 loss.forward()
 loss.backward(1.0)
