@@ -116,14 +116,15 @@ static char *test_sigmoid() {
     Node *scale = init(7.0);
 
     // to avoid multiply-by-1 accidents
-    Node *loss = mul(scale, sigmoid(add(mul(a, x), b)));
+    Node *prob = mul(scale, sigmoid(add(mul(a, x), b)));
+    Node *loss = trex_log(prob);
 
     forward(loss);
     backward(loss, 1.0);
 
     // printf("da=%f, actual=%f\n", a->grad, finite_diff(a, loss));
 
-    mu_assert_close("forward sigmoid", loss->val, 7.0 * 0.97068776924);
+    mu_assert_close("forward sigmoid", prob->val, 7.0 * 0.97068776924);
     mu_assert_close("sigmmoid: da", a->grad, finite_diff(a, loss));
     mu_assert_close("sigmoid: db", b->grad, finite_diff(b, loss));
     mu_assert_close("sigmoid: dx", x->grad, finite_diff(x, loss));

@@ -40,7 +40,7 @@ _lib.finite_diff.restype, _lib.finite_diff.argtypes = ctypes.c_double, [_P, _P]
 
 
 class Node:
-    _OP_ADD, _OP_SUB, _OP_MUL, _OP_DIV, _OP_RELU, _OP_SIG  = 1, 2, 3, 4, 5, 6
+    _OP_ADD, _OP_SUB, _OP_MUL, _OP_DIV, _OP_RELU, _OP_SIG, _OP_LN = 1, 2, 3, 4, 5, 6, 7
 
     def __init__(self, val):
         self._p = _lib.init(float(val))
@@ -105,6 +105,10 @@ def relu(node):
 
 def sigmoid(node):
     return transform(node, Node._OP_SIG)
+
+
+def log(node):
+    return transform(node, Node._OP_LN)
 
 
 def finite_diff(inp, target):

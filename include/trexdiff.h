@@ -12,7 +12,8 @@ typedef enum {
     OP_MUL,
     OP_DIV,
     OP_RELU,
-    OP_SIGMOID
+    OP_SIGMOID,
+    OP_LN
 } OpType;
 
 
@@ -66,6 +67,10 @@ static inline Node* relu(Node* a) {
 
 static inline Node* sigmoid(Node* a) {
     return transform(a, OP_SIGMOID);
+}
+
+static inline Node* trex_log(Node* a) {
+    return transform(a, OP_LN);
 }
 
 
