@@ -8,9 +8,10 @@ _A minimal autodiff package written in C._
 You are on branch `dev-scalar`, which has a scalar implementation of autodiff.
 This is the earliest _dev_ branch of the package.
 
-## Example
+## Examples
 
-2D-regression,see [examples/01_regression_gd.ipynb](https://github.com/traikodinev/trexdiff/blob/dev-scalar/examples/01_regression_gd.ipynb)
+- 2D-regression,see [examples/01_regression_gd.ipynb](https://github.com/traikodinev/trexdiff/blob/dev-scalar/examples/01_regression_gd.ipynb)
+- Neural Net classification [examples/02_nonlinear_classification.ipynb](https://github.com/traikodinev/trexdiff/blob/dev-scalar/examples/02_nonlinear_classification.ipynb)
 
 ```py
 N_iter = 500
