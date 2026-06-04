@@ -1,15 +1,15 @@
 CC      = gcc
 CFLAGS  = -std=c11 -Wall -Wextra -Wpedantic -O2 -g -Iinclude
-LDFLAGS = -lm
+LDFLAGS = -lm -lblas
 
 BUILD    = build
-LIB_SRC  = src/trexdiff.c
-LIB_HDR  = include/trexdiff.h
-LIB_OBJ  = $(BUILD)/trexdiff.o
+LIB_SRCS = src/trexdiff.c src/tensor2d.c
+LIB_HDRS = include/trexdiff.h include/tensor2d.h
+LIB_OBJS = $(BUILD)/trexdiff.o $(BUILD)/tensor2d.o
 LIB_SO   = $(BUILD)/libtrexdiff.so
 EXAMPLE  = $(BUILD)/example
 
-TEST_SRCS = tests/test_graph.c
+TEST_SRCS = tests/test_graph.c tests/test_tensor.c
 TEST_BINS = $(TEST_SRCS:tests/%.c=$(BUILD)/%)
 
 LEAK_BIN  = $(BUILD)/test_memory
@@ -24,16 +24,16 @@ all: example python
 $(BUILD):
 	mkdir -p $(BUILD)
 
-$(LIB_OBJ): $(LIB_SRC) $(LIB_HDR) | $(BUILD)
+$(BUILD)/%.o: src/%.c $(LIB_HDRS) | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(LIB_SO): $(LIB_SRC) $(LIB_HDR) | $(BUILD)
-	$(CC) $(CFLAGS) -shared -fPIC $< -o $@ $(LDFLAGS)
+$(LIB_SO): $(LIB_SRCS) $(LIB_HDRS) | $(BUILD)
+	$(CC) $(CFLAGS) -shared -fPIC $(LIB_SRCS) -o $@ $(LDFLAGS)
 
 example: $(EXAMPLE)
 
-$(EXAMPLE): examples/example.c $(LIB_OBJ) $(LIB_HDR) | $(BUILD)
-	$(CC) $(CFLAGS) $< $(LIB_OBJ) -o $@ $(LDFLAGS)
+$(EXAMPLE): examples/example.c $(LIB_OBJS) $(LIB_HDRS) | $(BUILD)
+	$(CC) $(CFLAGS) $< $(LIB_OBJS) -o $@ $(LDFLAGS)
 
 python: $(PY_SO)
 
@@ -47,11 +47,11 @@ test-leak: $(LEAK_BIN)
 	@echo "--- leak check: $(LEAK_BIN) ---"
 	$(LEAK_BIN)
 
-$(LEAK_BIN): tests/test_memory.c $(LIB_OBJ) $(LIB_HDR) | $(BUILD)
-	$(CC) $(CFLAGS) -fsanitize=leak -Itests $< $(LIB_OBJ) -o $@ $(LDFLAGS)
+$(LEAK_BIN): tests/test_memory.c $(LIB_OBJS) $(LIB_HDRS) | $(BUILD)
+	$(CC) $(CFLAGS) -fsanitize=leak -Itests $< $(LIB_OBJS) -o $@ $(LDFLAGS)
 
-$(BUILD)/%: tests/%.c $(LIB_OBJ) $(LIB_HDR) | $(BUILD)
-	$(CC) $(CFLAGS) -Itests $< $(LIB_OBJ) -o $@ $(LDFLAGS)
+$(BUILD)/%: tests/%.c $(LIB_OBJS) $(LIB_HDRS) | $(BUILD)
+	$(CC) $(CFLAGS) -Itests $< $(LIB_OBJS) -o $@ $(LDFLAGS)
 
 clean:
 	rm -rf $(BUILD)
