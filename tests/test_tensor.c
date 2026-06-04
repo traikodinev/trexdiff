@@ -130,15 +130,15 @@ static char *test_matmul_identity(void) {
     double A_data[] = {1, 2, 3, 4, 5, 6};
     double I_data[] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
     Tensor2D *A = tensor2d_from_array(2, 3, A_data);
-    Tensor2D *I = tensor2d_from_array(3, 3, I_data);
-    Tensor2D *C = tensor2d_matmul(A, I);
+    Tensor2D *Identity = tensor2d_from_array(3, 3, I_data);
+    Tensor2D *C = tensor2d_matmul(A, Identity);
     mu_assert("matmul_identity: NULL result", C != NULL);
     mu_assert("matmul_identity: wrong M", C->M == 2);
     mu_assert("matmul_identity: wrong N", C->N == 3);
     for (size_t i = 0; i < 6; ++i)
         mu_assert_close("matmul_identity: value mismatch", C->matrix[i], A_data[i]);
     tensor2d_free(A);
-    tensor2d_free(I);
+    tensor2d_free(Identity);
     tensor2d_free(C);
     return 0;
 }
