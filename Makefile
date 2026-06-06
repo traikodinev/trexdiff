@@ -9,7 +9,7 @@ LIB_OBJS = $(BUILD)/trexdiff.o $(BUILD)/tensor2d.o
 LIB_SO   = $(BUILD)/libtrexdiff.so
 EXAMPLE  = $(BUILD)/example
 
-TEST_SRCS = tests/test_graph.c tests/test_tensor.c
+TEST_SRCS = tests/test_graph.c tests/test_graph_2d.c tests/test_tensor.c
 TEST_BINS = $(TEST_SRCS:tests/%.c=$(BUILD)/%)
 
 LEAK_BIN  = $(BUILD)/test_memory

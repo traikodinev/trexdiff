@@ -27,6 +27,11 @@ Tensor2D* tensor2d_zeros(size_t M, size_t N) {
 }
 
 
+void tensor2d_set_zeros(Tensor2D* tensor) {
+    memset(tensor->matrix, 0, tensor->M * tensor->N * sizeof(double));
+}
+
+
 Tensor2D* tensor2d_ones(size_t M, size_t N) {
     Tensor2D* tensor = _init_tensor2d(M, N);
     
@@ -103,3 +108,19 @@ Tensor2D* tensor2d_scalar_mul(Tensor2D* A, double scalar) {
     return C;
 }
 
+
+// inplace operations
+void tensor2d_add_inplace(Tensor2D* A, const Tensor2D* B, double scalar) {
+    if (A->M != B->M || A->N != B->N)
+        return;
+    for (size_t i = 0; i < A->M * A->N; ++i)
+        A->matrix[i] += scalar * B->matrix[i];
+}
+
+// inplace operations
+void tensor2d_sub_inplace(Tensor2D* A, const Tensor2D* B, double scalar) {
+    if (A->M != B->M || A->N != B->N)
+        return;
+    for (size_t i = 0; i < A->M * A->N; ++i)
+        A->matrix[i] -= scalar * B->matrix[i];
+}

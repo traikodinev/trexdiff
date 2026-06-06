@@ -1,5 +1,5 @@
-#ifndef TREXDIFF_H
-#define TREXDIFF_H
+#ifndef TENSOR2D_H
+#define TENSOR2D_H
 
 
 #include <stdlib.h>
@@ -21,6 +21,7 @@ typedef struct Tensor2D {
 Tensor2D* tensor2d_from_array(size_t M, size_t N, double* matrix);
 Tensor2D* tensor2d_zeros(size_t M, size_t N);
 Tensor2D* tensor2d_ones(size_t M, size_t N);
+void tensor2d_set_zeros(Tensor2D* tensor);
 
 void tensor2d_free(Tensor2D* tensor);
 
@@ -31,6 +32,11 @@ Tensor2D* tensor2d_transpose(Tensor2D* A);
 Tensor2D* tensor2d_add(Tensor2D* A, Tensor2D* B);
 Tensor2D* tensor2d_sub(Tensor2D* A, Tensor2D* B);
 Tensor2D* tensor2d_scalar_mul(Tensor2D* A, double scalar);
+
+// compute A + scalar * B in-place (A is modified)
+void tensor2d_add_inplace(Tensor2D* A, const Tensor2D* B, double scalar);
+// compute A - scalar * B in-place (A is modified)
+void tensor2d_sub_inplace(Tensor2D* A, const Tensor2D* B, double scalar);
 
 
 // TODO: inverse solver/determinant

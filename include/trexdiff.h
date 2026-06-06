@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include "tensor2d.h"
 
 // op type
 typedef enum {
@@ -28,9 +29,9 @@ typedef struct NodeArray {
 
 
 struct Node {
-    double val;
-    double grad; // dL/d_Node
-    double partial; // partial accumulated in the current backward pass
+    Tensor2D* val;
+    Tensor2D* grad; // dL/d_Node
+    Tensor2D* partial; // partial accumulated in the current backward pass
                     // this lets us call .backward multiple times to accumulate losses
 
     bool visited; // node visted (in a pass regardless of direction)
@@ -43,7 +44,7 @@ struct Node {
 };
 
 
-Node* init(double val);
+Node* init(Tensor2D* val);
 Node* combine(Node* a, Node* b, OpType op_type);
 
 // TODO: better representation of functionals
@@ -75,14 +76,15 @@ static inline Node* trex_log(Node* a) {
 
 
 void free_node(Node *n);
+void free_node_shallow(Node *n);
 void reset_visited(Node *z);
 int reset_and_count(Node *z);
 
 void zerograd(Node *z);
 void forward(Node *z);
-void backward(Node *z, double partial);
+int backward(Node *z, Tensor2D* partial);
 
 
-double finite_diff(Node *input, Node *target);
+Tensor2D* finite_diff(Node *input, Node *target);
 
 #endif
