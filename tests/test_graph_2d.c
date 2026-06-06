@@ -381,6 +381,44 @@ static char *test_accumulation_matrix(void) {
 }
 
 
+static char *test_transpose(void) {
+    double x_data[] = {1.0, 2.0, 3.0};
+    Node *x = init(tensor2d_from_array(1, 3, x_data));
+    Node *loss = mul(x, transpose(x)); // 1x3 @ 3x1 = 1x1
+
+    forward(loss);
+    backward(loss, tensor2d_ones(1, 1));
+
+    mu_assert_tensor_close("transpose: dx", x->grad, finite_diff(x, loss));
+
+    free_node(loss);
+    return 0;
+}
+
+
+static char *test_broadcast(void) {
+    double x_data[] = {1.0, 2.0, 3.0};
+    double y_data[] = {0.5, 1.5, -1.0};
+
+    Node *x = init(tensor2d_from_array(1, 3, x_data));
+    Node *y = init(tensor2d_from_array(1, 3, y_data));
+    Node *loss = mul(
+        broadcast_add(x, init(sc(1.0))),
+        transpose(broadcast_sub(y, init(sc(2.0))))
+    ); // (x+1) @ (y-2) -> 1x1
+
+
+    forward(loss);
+    backward(loss, tensor2d_ones(1, 1));
+
+    mu_assert_tensor_close("broadcast: dx", x->grad, finite_diff(x, loss));
+    mu_assert_tensor_close("broadcast: dy", y->grad, finite_diff(y, loss));
+
+    free_node(loss);
+    return 0;
+}
+
+
 // Runner
 static char *all_tests(void) {
     mu_run_test(test_forward);
@@ -396,6 +434,8 @@ static char *all_tests(void) {
     mu_run_test(test_ln_vector); 
     mu_run_test(test_two_layer);
     mu_run_test(test_accumulation_matrix);
+    mu_run_test(test_transpose);
+    mu_run_test(test_broadcast);
     return 0;
 }
 

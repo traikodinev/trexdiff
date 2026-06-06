@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include "tensor2d.h"
 
 // initilization functions
@@ -76,9 +77,18 @@ Tensor2D* tensor2d_transpose(Tensor2D* A) {
 
 
 static inline Tensor2D* _tensor2d_affine(double a, Tensor2D* A, double b, Tensor2D* B) {
+    // TODO: handle transpose
+    
     // returna a * A + b * B
-    if (A->M != B->M || A->N != B->N)
+    if (A->M != B->M || A->N != B->N) {
+        // warn - transpose not implemented
+        fprintf(
+            stderr,
+            "[WARNING] _tensor2d_affine: incompatible dims, %zux%zu and %zux%zu, transpose not implemented\n",
+            A->M, A->N, B->M, B->N
+        );
         return NULL;
+    }
 
     Tensor2D* C = _init_tensor2d(A->M, A->N);
 
@@ -111,16 +121,14 @@ Tensor2D* tensor2d_scalar_mul(Tensor2D* A, double scalar) {
 
 // inplace operations
 void tensor2d_add_inplace(Tensor2D* A, const Tensor2D* B, double scalar) {
-    if (A->M != B->M || A->N != B->N)
+    if (A->M != B->M || A->N != B->N) {
+        fprintf(
+            stderr,
+            "[WARNING] tensor2d_add_inplace: incompatible dims, %zux%zu and %zux%zu, transpose not implemented\n",
+            A->M, A->N, B->M, B->N
+        );
         return;
+    }
     for (size_t i = 0; i < A->M * A->N; ++i)
         A->matrix[i] += scalar * B->matrix[i];
-}
-
-// inplace operations
-void tensor2d_sub_inplace(Tensor2D* A, const Tensor2D* B, double scalar) {
-    if (A->M != B->M || A->N != B->N)
-        return;
-    for (size_t i = 0; i < A->M * A->N; ++i)
-        A->matrix[i] -= scalar * B->matrix[i];
 }

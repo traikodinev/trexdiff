@@ -35,8 +35,6 @@ Tensor2D* tensor2d_scalar_mul(Tensor2D* A, double scalar);
 
 // compute A + scalar * B in-place (A is modified)
 void tensor2d_add_inplace(Tensor2D* A, const Tensor2D* B, double scalar);
-// compute A - scalar * B in-place (A is modified)
-void tensor2d_sub_inplace(Tensor2D* A, const Tensor2D* B, double scalar);
 
 
 // TODO: inverse solver/determinant

@@ -23,6 +23,8 @@ _lib.tensor2d_add.restype,         _lib.tensor2d_add.argtypes          = _TP,  [
 _lib.tensor2d_sub.restype,         _lib.tensor2d_sub.argtypes          = _TP,  [_TP, _TP]
 _lib.tensor2d_scalar_mul.restype,  _lib.tensor2d_scalar_mul.argtypes   = _TP,  [_TP, ctypes.c_double]
 
+_lib.tensor2d_add_inplace.restype, _lib.tensor2d_add_inplace.argtypes = None, [_TP, _TP, ctypes.c_double]
+
 
 class tensor2d:
     """A 2-D matrix backed by the C tensor2d library."""
@@ -86,6 +88,14 @@ class tensor2d:
             raise ValueError(f"matmul: incompatible shapes {self.shape} and {other.shape}")
         return tensor2d._from_ptr(ptr)
 
+    def __iadd__(self, other):
+        _lib.tensor2d_add_inplace(self._p, other._p, 1.0)
+        return self
+    
+    def __isub__(self, other):
+        _lib.tensor2d_add_inplace(self._p, other._p, -1.0)
+        return self
+
     def __add__(self, other):
         ptr = _lib.tensor2d_add(self._p, other._p)
         if not ptr:
@@ -103,6 +113,17 @@ class tensor2d:
 
     def __rmul__(self, scalar):
         return self.__mul__(scalar)
+    
+    def __getitem__(self, key):
+        M, N = self.shape
+        if isinstance(key, tuple) and len(key) == 2:
+            i, j = key
+            if 0 <= i < M and 0 <= j < N:
+                return self._p.contents.matrix[i * N + j]
+            else:
+                raise IndexError("tensor2d index out of range")
+        else:
+            raise TypeError("tensor2d indices must be a tuple of two integers")
 
     # tolist
     def tolist(self):

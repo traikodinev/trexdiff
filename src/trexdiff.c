@@ -61,6 +61,79 @@ Node* combine(Node* a, Node* b, OpType op_type) {
     node->inputs[0] = a;
     node->inputs[1] = b;
 
+    switch (op_type) {
+        case OP_ADD:
+        case OP_SUB:
+            if (a->val->M != b->val->M || a->val->N != b->val->N) {
+                fprintf(
+                    stderr,
+                    "[WARNING] combine: incompatible dims for add/sub, %zux%zu and %zux%zu, transpose not implemented\n",
+                    a->val->M, a->val->N, b->val->M, b->val->N
+                );
+            }
+
+            node->val->M = a->val->M;
+            node->val->N = a->val->N;
+            node->grad->M = a->val->M;
+            node->grad->N = a->val->N;
+            node->partial->M = a->val->M;
+            node->partial->N = a->val->N;
+            break;
+        case OP_MUL:
+            if (a->val->N != b->val->M) {
+                fprintf(
+                    stderr,
+                    "[WARNING] combine: incompatible dims for mul, %zux%zu and %zux%zu, transpose not implemented\n",
+                    a->val->M, a->val->N, b->val->M, b->val->N
+                );
+            }
+
+            node->val->M = a->val->M;
+            node->val->N = b->val->N;
+            node->grad->M = a->val->M;
+            node->grad->N = b->val->N;
+            node->partial->M = a->val->M;
+            node->partial->N = b->val->N;
+            break;
+        case OP_RELU:
+        case OP_SIGMOID:
+        case OP_LN:
+        case OP_NOOP:
+            node->val->M = a->val->M;
+            node->val->N = a->val->N;
+            node->grad->M = a->val->M;
+            node->grad->N = a->val->N;
+            node->partial->M = a->val->M;
+            node->partial->N = a->val->N;
+            break;
+        case OP_TRANSPOSE:
+            node->val->M = a->val->N;
+            node->val->N = a->val->M;
+            node->grad->M = a->val->N;
+            node->grad->N = a->val->M;
+            node->partial->M = a->val->N;
+            node->partial->N = a->val->M;
+            break;
+        case OP_BROADCAST_ADD:
+        case OP_BROADCAST_SUB:
+            if (a->val->N != b->val->N && b->val->M != 1) {
+                fprintf(
+                    stderr,
+                    "[WARNING] combine: incompatible dims for broadcast, %zux%zu and %zux%zu\n",
+                    a->val->M, a->val->N, b->val->M, b->val->N
+                );
+            }
+            node->val->M = a->val->M;
+            node->val->N = a->val->N;
+            node->grad->M = a->val->M;
+            node->grad->N = a->val->N;
+            node->partial->M = a->val->M;
+            node->partial->N = a->val->N;
+            break;
+        default:
+            break;
+    }
+
     node->op_type = op_type;
 
     return node;
@@ -74,6 +147,17 @@ Node* transform(Node *a, OpType op_type) {
     node->inputs[0] = a;
     node->op_type = op_type;
 
+    return node;
+}
+
+
+Node* transpose(Node* a) {
+    // TODO: transpose (and functionals) as inplace (no tensor copy)
+    Node* node = init(tensor2d_zeros(a->val->N, a->val->M));
+    node->input_count = 1;
+    node->inputs = malloc(sizeof(Node*));
+    node->inputs[0] = a;
+    node->op_type = OP_TRANSPOSE;
     return node;
 }
 
@@ -164,6 +248,20 @@ static void _forward(Node* z) {
             for (size_t i = 0; i < z->inputs[0]->val->M * z->inputs[0]->val->N; ++ i)
                 z->val->matrix[i] = log(z->inputs[0]->val->matrix[i]);
             break;
+        case OP_TRANSPOSE:
+            // TODO: Better transpose inplace
+            for (size_t i = 0; i < z->inputs[0]->val->M; ++i)
+                for (size_t j = 0; j < z->inputs[0]->val->N; ++j)
+                    z->val->matrix[j * z->val->N + i] = z->inputs[0]->val->matrix[i * z->inputs[0]->val->N + j];
+            break;
+        case OP_BROADCAST_ADD:
+        case OP_BROADCAST_SUB: {
+            int sign = (z->op_type == OP_BROADCAST_ADD) ? 1 : -1;
+            for (size_t i = 0; i < z->inputs[0]->val->M; ++i)
+                for (size_t j = 0; j < z->inputs[0]->val->N; ++j)
+                    z->val->matrix[i * z->val->N + j] = z->inputs[0]->val->matrix[i * z->inputs[0]->val->N + j] + sign * z->inputs[1]->val->matrix[j];
+            break;
+        }
         case OP_NOOP:
         default:
             // no-op by default
@@ -244,6 +342,24 @@ static inline void _backward(Node *start, Tensor2D* partial) {
                 // z->inputs[0]->partial += z->partial / z->inputs[0]->val;
                 for (size_t i = 0; i < z->inputs[0]->val->M * z->inputs[0]->val->N; ++ i)
                     z->inputs[0]->partial->matrix[i] += z->partial->matrix[i] / z->inputs[0]->val->matrix[i];
+                break;
+            case OP_TRANSPOSE:
+                // transparent routing of partials, since d(A^T) = (dA)^T
+                for (size_t i = 0; i < z->inputs[0]->val->M; ++i)
+                    for (size_t j = 0; j < z->inputs[0]->val->N; ++j)
+                        z->inputs[0]->partial->matrix[i * z->inputs[0]->partial->N + j] += z->partial->matrix[j * z->partial->N + i];
+                break;
+            case OP_BROADCAST_ADD:
+            case OP_BROADCAST_SUB:
+                // sum of partials across broadcast dimension
+                tensor2d_add_inplace(z->inputs[0]->partial, z->partial, 1.0);
+                int sign = (z->op_type == OP_BROADCAST_ADD) ? 1 : -1;
+                for (size_t j = 0; j < z->inputs[1]->val->N; ++j) {
+                    double col_sum = 0.0;
+                    for (size_t i = 0; i < z->partial->M; ++i)
+                        col_sum += z->partial->matrix[i * z->partial->N + j];
+                    z->inputs[1]->partial->matrix[j] += sign * col_sum;
+                }
                 break;
             case OP_NOOP:
             default:

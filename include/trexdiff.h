@@ -14,7 +14,10 @@ typedef enum {
     OP_DIV,
     OP_RELU,
     OP_SIGMOID,
-    OP_LN
+    OP_LN,
+    OP_TRANSPOSE,
+    OP_BROADCAST_ADD,
+    OP_BROADCAST_SUB
 } OpType;
 
 
@@ -62,6 +65,14 @@ static inline Node* mul(Node* a, Node* b) {
     return combine(a, b, OP_MUL);
 }
 
+static inline Node* broadcast_add(Node* a, Node* b) {
+    return combine(a, b, OP_BROADCAST_ADD);
+}
+
+static inline Node* broadcast_sub(Node* a, Node* b) {
+    return combine(a, b, OP_BROADCAST_SUB);
+}
+
 static inline Node* relu(Node* a) {
     return transform(a, OP_RELU);
 }
@@ -74,6 +85,7 @@ static inline Node* trex_log(Node* a) {
     return transform(a, OP_LN);
 }
 
+Node* transpose(Node* a);
 
 void free_node(Node *n);
 void free_node_shallow(Node *n);
