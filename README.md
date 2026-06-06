@@ -13,10 +13,39 @@ This branch is still under development, some functionality is still using `dev-s
 ## Current Progress
 
 - [x] tensor2d - basic math w/ BLAS calls
-- [ ] tensor2d as backend for node
+- [x] tensor2d as backend for node
 - [ ] python tests
     - [x] framework and tensor matmul test
     - [ ] API correctness test
+
+`Node` and `Tensor2D` should be unified, because they are not very usable:
+
+```py
+from trexdiff import tensor2d, Node
+
+x = tensor2d.ones(1, 1)
+y = Node(x)
+# node now owns `x`
+
+del y
+# also deletes x
+```
+
+Instead, current WIP is to use an `array` class:
+
+```py
+from trexdiff import array
+x = array([1,2])
+
+# array acts as both node and tensor2d
+```
+
+Other issues:
+
+- [ ] functionals and transpose copy nodes and waste memory
+- [ ] Node count is overly pessimistic
+- [ ] no cycle detection in graph
+- [ ] graph compilation
 
 ## Examples
 

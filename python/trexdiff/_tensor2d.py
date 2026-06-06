@@ -41,28 +41,32 @@ class tensor2d:
         flat = [float(x) for row in rows for x in row]
         arr  = (ctypes.c_double * len(flat))(*flat)
         self._p = _lib.tensor2d_from_array(M, N, arr)
+        self._owned = True
 
     @classmethod
     def zeros(cls, M, N):
         obj = cls.__new__(cls)
         obj._p = _lib.tensor2d_zeros(M, N)
+        obj._owned = True
         return obj
 
     @classmethod
     def ones(cls, M, N):
         obj = cls.__new__(cls)
         obj._p = _lib.tensor2d_ones(M, N)
+        obj._owned = True
         return obj
 
     @classmethod
-    def _from_ptr(cls, ptr):
+    def _from_ptr(cls, ptr, owned=True):
         """Wrap a raw C pointer returned by a library call."""
         obj = cls.__new__(cls)
         obj._p = ptr
+        obj._owned = owned
         return obj
 
     def __del__(self):
-        if getattr(self, "_p", None):
+        if getattr(self, "_owned", True) and getattr(self, "_p", None):
             _lib.tensor2d_free(self._p)
 
     # shape is just (M,N)
