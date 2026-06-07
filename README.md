@@ -12,9 +12,51 @@ This branch is still under development.
 
 ## Examples
 
-- 2D-regression,see [examples/01_regression_gd.ipynb](https://github.com/traikodinev/trexdiff/blob/dev-blas/examples/01_regression_gd.ipynb)
-- Neural Net classification [examples/02_nonlinear_classification.ipynb](https://github.com/traikodinev/trexdiff/blob/dev-blas/examples/02_nonlinear_classification.ipynb)
-- Pendulum Optimal Control [examples/04_optimal_control_pendulum.ipynb](https://github.com/traikodinev/trexdiff/blob/dev-blas/examples/04_optimal_control_pendulum.ipynb)
+- 2D-regression,see [examples/01_regression_gd.ipynb](examples/01_regression_gd.ipynb)
+- Neural Net classification [examples/02_nonlinear_classification.ipynb](examples/02_nonlinear_classification.ipynb)
+- Pendulum Optimal Control [examples/04_optimal_control_pendulum.ipynb](examples/04_optimal_control_pendulum.ipynb)
+
+## Pendulum Optimal Control
+
+
+```py
+g = Node(tensor2d([[9.81]]))
+dt = Node(tensor2d([[5e-2]]))
+p5 = Node(tensor2d([[0.5]]))
+
+def f(x, dx, u, dt):
+    # pendulum forward dynamics
+    # we don't support indexing, so have to use x/dx
+    # x - theta, dx - theta_dot
+    
+    theta_ddot = u - g @ sin(x)
+
+    # implicit Euler
+    x_new = x + dx @ dt + p5 @ theta_ddot @ dt @ dt
+    dx_new = dx + theta_ddot @ dt
+    return x_new, dx_new
+
+xs = [x0]
+us = []
+for i in range(T):
+    u = Node(tensor2d([[0.0]]))
+    us.append(u)
+
+    x_new, dx_new = f(xs[-1][0], xs[-1][1], u, dt)
+    xs.append((x_new, dx_new))
+
+
+# loss is squared distance to upright position at final time step
+target = Node(tensor2d([[np.pi]]))
+Qf = Node(tensor2d([[1e5]]))
+
+loss = Qf @ (xs[-1][0] - target) @ (xs[-1][0] - target) + Qf @ (xs[-1][1] @ xs[-1][1])
+```
+
+![Pendulum optimal control animation](examples/figures/pendulum.gif)
+
+
+### Neural Net Classification
 
 ```py
 # neural network definition
