@@ -17,7 +17,9 @@ typedef enum {
     OP_LN,
     OP_TRANSPOSE,
     OP_BROADCAST_ADD,
-    OP_BROADCAST_SUB
+    OP_BROADCAST_SUB,
+    OP_SIN,
+    OP_COS
 } OpType;
 
 

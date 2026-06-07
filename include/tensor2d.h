@@ -48,6 +48,9 @@ Tensor2D* tensor2d_elwise_div(Tensor2D* A, const Tensor2D* B);
 Tensor2D* tensor2d_relu(Tensor2D* A);
 Tensor2D* tensor2d_sigmoid(Tensor2D* A);
 
+Tensor2D* tensor2d_sin(Tensor2D* A);
+Tensor2D* tensor2d_cos(Tensor2D* A);
+
 Tensor2D* tensor2d_add_broadcast(Tensor2D* A, Tensor2D* B, double scalar); // A + scalar * B
 
 // TODO: inverse solver/determinant

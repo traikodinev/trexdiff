@@ -44,6 +44,7 @@ _lib.finite_diff.restype, _lib.finite_diff.argtypes = _P_T2D,             [_P, _
 class Node:
     _OP_ADD, _OP_SUB, _OP_MUL, _OP_DIV, _OP_RELU, _OP_SIG, _OP_LN, _OP_TRANSPOSE = 1, 2, 3, 4, 5, 6, 7, 8
     _OP_BROADCAST_ADD, _OP_BROADCAST_SUB = 9, 10
+    _OP_SIN, _OP_COS = 11, 12
 
     def __init__(self, tensor=None, size=None):
         if size is not None and tensor is not None:
@@ -126,7 +127,8 @@ def _transform(node, op_code):
 def relu(node):       return _transform(node, Node._OP_RELU)
 def sigmoid(node):    return _transform(node, Node._OP_SIG)
 def log(node):        return _transform(node, Node._OP_LN)
-
+def sin(node):        return _transform(node, Node._OP_SIN)
+def cos(node):        return _transform(node, Node._OP_COS)                           
 
 def finite_diff(inp, target):
     return _lib.finite_diff(inp._p, target._p)

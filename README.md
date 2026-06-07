@@ -14,6 +14,7 @@ This branch is still under development.
 
 - 2D-regression,see [examples/01_regression_gd.ipynb](https://github.com/traikodinev/trexdiff/blob/dev-scalar/examples/01_regression_gd.ipynb)
 - Neural Net classification [examples/02_nonlinear_classification.ipynb](https://github.com/traikodinev/trexdiff/blob/dev-scalar/examples/02_nonlinear_classification.ipynb)
+- Pendulum Optimal Control [examples/04_optimal_control_pendulum.ipynb](https://github.com/traikodinev/trexdiff/blob/dev-scalar/examples/04_optimal_control_pendulum.ipynb)
 
 ```py
 # neural network definition

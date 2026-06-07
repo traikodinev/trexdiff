@@ -38,6 +38,9 @@ _lib.tensor2d_sigmoid.restype,     _lib.tensor2d_sigmoid.argtypes      = _TP,  [
 
 _lib.tensor2d_add_broadcast.restype, _lib.tensor2d_add_broadcast.argtypes = _TP, [_TP, _TP, ctypes.c_double]
 
+_lib.tensor2d_cos.restype,         _lib.tensor2d_cos.argtypes          = _TP,  [_TP]
+_lib.tensor2d_sin.restype,         _lib.tensor2d_sin.argtypes          = _TP,  [_TP]
+
 class tensor2d:
     """A 2-D matrix backed by the C tensor2d library."""
 
@@ -251,4 +254,13 @@ class tensor2d:
 
     def sigmoid(self):
         ptr = _lib.tensor2d_sigmoid(self._p)
+        return tensor2d._from_ptr(ptr)
+
+
+    def sin(self):
+        ptr = _lib.tensor2d_sin(self._p)
+        return tensor2d._from_ptr(ptr)
+    
+    def cos(self):
+        ptr = _lib.tensor2d_cos(self._p)
         return tensor2d._from_ptr(ptr)

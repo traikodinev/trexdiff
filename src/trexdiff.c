@@ -98,6 +98,8 @@ Node* combine(Node* a, Node* b, OpType op_type) {
         case OP_RELU:
         case OP_SIGMOID:
         case OP_LN:
+        case OP_SIN:
+        case OP_COS:
         case OP_NOOP:
             node->val->M = a->val->M;
             node->val->N = a->val->N;
@@ -248,6 +250,14 @@ static void _forward(Node* z) {
             for (size_t i = 0; i < z->inputs[0]->val->M * z->inputs[0]->val->N; ++ i)
                 z->val->matrix[i] = log(z->inputs[0]->val->matrix[i]);
             break;
+        case OP_SIN:
+            for (size_t i = 0; i < z->inputs[0]->val->M * z->inputs[0]->val->N; ++ i)
+                z->val->matrix[i] = sin(z->inputs[0]->val->matrix[i]);
+            break;
+        case OP_COS:
+            for (size_t i = 0; i < z->inputs[0]->val->M * z->inputs[0]->val->N; ++ i)
+                z->val->matrix[i] = cos(z->inputs[0]->val->matrix[i]);
+            break;
         case OP_TRANSPOSE:
             // TODO: Better transpose inplace
             for (size_t i = 0; i < z->inputs[0]->val->M; ++i)
@@ -342,6 +352,16 @@ static inline void _backward(Node *start, Tensor2D* partial) {
                 // z->inputs[0]->partial += z->partial / z->inputs[0]->val;
                 for (size_t i = 0; i < z->inputs[0]->val->M * z->inputs[0]->val->N; ++ i)
                     z->inputs[0]->partial->matrix[i] += z->partial->matrix[i] / z->inputs[0]->val->matrix[i];
+                break;
+            case OP_SIN:
+                // z->inputs[0]->partial += z->partial * cos(z->inputs[0]->val);
+                for (size_t i = 0; i < z->inputs[0]->val->M * z->inputs[0]->val->N; ++ i)
+                    z->inputs[0]->partial->matrix[i] += z->partial->matrix[i] * cos(z->inputs[0]->val->matrix[i]);
+                break;
+            case OP_COS:
+                // z->inputs[0]->partial += -z->partial * sin(z->inputs[0]->val);
+                for (size_t i = 0; i < z->inputs[0]->val->M * z->inputs[0]->val->N; ++ i)
+                    z->inputs[0]->partial->matrix[i] += -z->partial->matrix[i] * sin(z->inputs[0]->val->matrix[i]);
                 break;
             case OP_TRANSPOSE:
                 // transparent routing of partials, since d(A^T) = (dA)^T

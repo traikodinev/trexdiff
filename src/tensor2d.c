@@ -167,6 +167,20 @@ Tensor2D* tensor2d_pow(Tensor2D* A, double exponent) {
     return C;
 }
 
+Tensor2D* tensor2d_sin(Tensor2D* A) {
+    Tensor2D* C = _init_tensor2d(A->M, A->N);
+    for (size_t i = 0; i < A->M * A->N; ++i)
+        C->matrix[i] = sin(A->matrix[i]);
+    return C;
+}
+
+Tensor2D* tensor2d_cos(Tensor2D* A) {
+    Tensor2D* C = _init_tensor2d(A->M, A->N);
+    for (size_t i = 0; i < A->M * A->N; ++i)
+        C->matrix[i] = cos(A->matrix[i]);
+    return C;
+}
+
 
 Tensor2D* tensor2d_elwise_mul(Tensor2D* A, const Tensor2D* B) {
     if (A->M != B->M || A->N != B->N) {
@@ -231,5 +245,4 @@ Tensor2D* tensor2d_add_broadcast(Tensor2D* A, Tensor2D* B, double scalar) {
     }
     return C;
 }
-
 

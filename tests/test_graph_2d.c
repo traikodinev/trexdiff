@@ -419,6 +419,21 @@ static char *test_broadcast(void) {
 }
 
 
+static char *test_trig(void) {
+    double x_data[] = {0.0, 1.0, -4.3};
+    Node *x = init(tensor2d_from_array(1, 3, x_data));
+    Node *loss = mul(transform(x, OP_SIN), transpose(transform(x, OP_COS)));
+
+    forward(loss);
+    backward(loss, tensor2d_ones(1, 1));
+
+    mu_assert_tensor_close("trig: dx", x->grad, finite_diff(x, loss));
+
+    free_node(loss);
+    return 0;
+}
+
+
 // Runner
 static char *all_tests(void) {
     mu_run_test(test_forward);
@@ -436,6 +451,7 @@ static char *all_tests(void) {
     mu_run_test(test_accumulation_matrix);
     mu_run_test(test_transpose);
     mu_run_test(test_broadcast);
+    mu_run_test(test_trig);
     return 0;
 }
 
