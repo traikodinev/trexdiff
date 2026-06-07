@@ -8,7 +8,7 @@ _A minimal autodiff package written in C._
 You are on branch `dev-blas`, which has a BLAS-based implementation of autodiff.
 This is the second _dev_ branch of the package, built from `dev-scalar`.
 
-This branch is still under development, some functionality is still using `dev-scalar` code!
+This branch is still under development.
 
 ## Examples
 
