@@ -71,20 +71,17 @@ class Node:
         n.grad = tensor2d._from_ptr(n._p.contents.grad, owned=False)  # freed by free_node
         return n
 
-    def _can_broadcast(self, other):
-        """Can you broadcast other to self?"""
-        return self.val.shape[1] == other.val.shape[1] and other.val.shape[0] == 1
-
     def __add__(self, other):
-        if self._can_broadcast(other):
+        if self.val.can_broadcast(other.val):
             return self._combine(other, Node._OP_BROADCAST_ADD)
         return self._combine(other, Node._OP_ADD)
     
     def __sub__(self, other):
-        if self._can_broadcast(other):
+        if self.val.can_broadcast(other.val):
             return self._combine(other, Node._OP_BROADCAST_SUB)
         return self._combine(other, Node._OP_SUB)
-
+    
+    
     def __mul__(self, other): return self._combine(other, Node._OP_MUL)
     def __matmul__(self, other): return self._combine(other, Node._OP_MUL)  # alias for matmul
     def __truediv__(self, other): return self._combine(other, Node._OP_DIV)
@@ -97,7 +94,7 @@ class Node:
         n.val = tensor2d._from_ptr(n._p.contents.val, owned=False)  # freed by free_node
         n.grad = tensor2d._from_ptr(n._p.contents.grad, owned=False)  # freed by free_node
         return n
-        
+
     def forward(self):
         _lib.forward(self._p)
 

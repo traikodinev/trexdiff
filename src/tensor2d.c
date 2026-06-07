@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 #include "tensor2d.h"
 
 // initilization functions
@@ -118,6 +119,10 @@ Tensor2D* tensor2d_scalar_mul(Tensor2D* A, double scalar) {
     return C;
 }
 
+void tensor2d_scalar_mul_inplace(Tensor2D* A, double scalar) {
+    for (size_t i = 0; i < A->M * A->N; ++ i)
+        A->matrix[i] *= scalar;
+}
 
 // inplace operations
 void tensor2d_add_inplace(Tensor2D* A, const Tensor2D* B, double scalar) {
@@ -132,3 +137,99 @@ void tensor2d_add_inplace(Tensor2D* A, const Tensor2D* B, double scalar) {
     for (size_t i = 0; i < A->M * A->N; ++i)
         A->matrix[i] += scalar * B->matrix[i];
 }
+
+Tensor2D* tensor2d_scalar_add(Tensor2D* A, double scalar) {
+    Tensor2D* C = _init_tensor2d(A->M, A->N);
+
+    for (size_t i = 0; i < A->M * A->N; ++ i)
+        C->matrix[i] = scalar + A->matrix[i];
+
+    return C;
+}
+
+
+Tensor2D* tensor2d_sqrt(Tensor2D* A) {
+    Tensor2D* C = _init_tensor2d(A->M, A->N);
+
+    for (size_t i = 0; i < A->M * A->N; ++ i)
+        C->matrix[i] = sqrt(A->matrix[i]);
+
+    return C;
+}
+
+
+Tensor2D* tensor2d_pow(Tensor2D* A, double exponent) {
+    Tensor2D* C = _init_tensor2d(A->M, A->N);
+
+    for (size_t i = 0; i < A->M * A->N; ++ i)
+        C->matrix[i] = pow(A->matrix[i], exponent);
+
+    return C;
+}
+
+
+Tensor2D* tensor2d_elwise_mul(Tensor2D* A, const Tensor2D* B) {
+    if (A->M != B->M || A->N != B->N) {
+        fprintf(
+            stderr,
+            "[WARNING] tensor2d_elwise_mul: incompatible dims, %zux%zu and %zux%zu, transpose not implemented\n",
+            A->M, A->N, B->M, B->N
+        );
+        return NULL;
+    }
+    Tensor2D* C = _init_tensor2d(A->M, A->N);
+    for (size_t i = 0; i < A->M * A->N; ++i)
+        C->matrix[i] = A->matrix[i] * B->matrix[i];
+    return C;
+}
+
+Tensor2D* tensor2d_elwise_div(Tensor2D* A, const Tensor2D* B) {
+    if (A->M != B->M || A->N != B->N) {
+        fprintf(
+            stderr,
+            "[WARNING] tensor2d_elwise_div: incompatible dims, %zux%zu and %zux%zu, transpose not implemented\n",
+            A->M, A->N, B->M, B->N
+        );
+        return NULL;
+    }
+    Tensor2D* C = _init_tensor2d(A->M, A->N);
+    for (size_t i = 0; i < A->M * A->N; ++i)
+        C->matrix[i] = A->matrix[i] / B->matrix[i];
+    return C;
+}
+
+
+Tensor2D* tensor2d_relu(Tensor2D* A) {
+    Tensor2D* C = _init_tensor2d(A->M, A->N);
+    for (size_t i = 0; i < A->M * A->N; ++i)
+        C->matrix[i] = fmax(0.0, A->matrix[i]);
+    return C;
+}
+
+Tensor2D* tensor2d_sigmoid(Tensor2D* A) {
+    Tensor2D* C = _init_tensor2d(A->M, A->N);
+    for (size_t i = 0; i < A->M * A->N; ++i)
+        C->matrix[i] = 1.0 / (1.0 + exp(-A->matrix[i]));
+    return C;
+}
+
+
+Tensor2D* tensor2d_add_broadcast(Tensor2D* A, Tensor2D* B, double scalar) {
+    if (A->N != B->N && B->M != 1) {
+        fprintf(
+            stderr,
+            "[WARNING] tensor2d_add_broadcast: incompatible dims, %zux%zu and %zux%zu, transpose not implemented\n",
+            A->M, A->N, B->M, B->N
+        );
+        return NULL;
+    }
+    Tensor2D* C = _init_tensor2d(A->M, A->N);
+    for (size_t i = 0; i < A->M; ++i) {
+        for (size_t j = 0; j < A->N; ++j) {
+            C->matrix[i * C->N + j] = A->matrix[i * A->N + j] + scalar * B->matrix[j];
+        }
+    }
+    return C;
+}
+
+

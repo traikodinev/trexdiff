@@ -55,36 +55,30 @@ _NOTE: This is still using dev-scalar code_
 - Neural Net classification [examples/02_nonlinear_classification.ipynb](https://github.com/traikodinev/trexdiff/blob/dev-scalar/examples/02_nonlinear_classification.ipynb)
 
 ```py
-N_iter = 500
+# neural network definition
+N_NEURONS = 15
 
-# input
-x = Node(0.0)
-a = Node(0.0)
-b = Node(0.0)
+# input nodes
+x = Node(tensor2d(xs))
+y = Node(tensor2d(ys.reshape(-1, 1)))
 
-y = Node(0.0)
-y_p = a * x + b
+ones = Node(tensor2d.ones(ys.shape[0], 1)) # todo: int-to-node
+eps = Node(tensor2d([[1e-7]]))
 
-# squared error loss
-l = (y - y_p) * (y - y_p)
+# weights
+w0 = Node(tensor2d(np.random.normal(0, 1, size=(2, N_NEURONS))))
+w1 = Node(tensor2d(np.random.normal(0, 1, size=(N_NEURONS, 1))))
 
-# learning rate
-mu = 2.5e-1
+b0 = Node(tensor2d(np.random.normal(0, 1, size=(1, N_NEURONS))))
+b1 = Node(tensor2d(np.random.normal(0, 1, size=(1, 1))))
 
-for iter in range(N_iter):
-    # zero grad every iteration, goes through entire graph
-    l.zerograd()
+# network
+layer1 = relu(x @ w0 + b0)
+logits = layer1 @ w1 + b1
+out_sigmoid = sigmoid(logits)
 
-    for i in range(N):
-        x.val = xs[i]
-        y.val = ys[i]
-
-        l.forward()
-        l.backward()
-
-    # mean squared error (/N)
-    a.val -= mu * a.grad / N
-    b.val -= mu * b.grad / N
+# cross-entropy loss
+loss = y.T @ log(out_sigmoid + eps) + (ones - y).T @ log(ones - out_sigmoid + eps)
 ```
 
 ## Build

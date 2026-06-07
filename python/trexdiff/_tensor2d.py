@@ -25,6 +25,18 @@ _lib.tensor2d_scalar_mul.restype,  _lib.tensor2d_scalar_mul.argtypes   = _TP,  [
 
 _lib.tensor2d_add_inplace.restype, _lib.tensor2d_add_inplace.argtypes = None, [_TP, _TP, ctypes.c_double]
 
+# tensor-scalar operations and inplace operations
+_lib.tensor2d_scalar_add.restype,  _lib.tensor2d_scalar_add.argtypes   = _TP,  [_TP, ctypes.c_double]
+_lib.tensor2d_scalar_mul.restype,  _lib.tensor2d_scalar_mul.argtypes   = _TP,  [_TP, ctypes.c_double]
+_lib.tensor2d_sqrt.restype,        _lib.tensor2d_sqrt.argtypes         = _TP,  [_TP]
+_lib.tensor2d_pow.restype,         _lib.tensor2d_pow.argtypes          = _TP,  [_TP, ctypes.c_double]
+_lib.tensor2d_elwise_mul.restype, _lib.tensor2d_elwise_mul.argtypes = _TP, [_TP, _TP]
+_lib.tensor2d_elwise_div.restype, _lib.tensor2d_elwise_div.argtypes = _TP, [_TP, _TP]
+
+_lib.tensor2d_relu.restype,        _lib.tensor2d_relu.argtypes         = _TP,  [_TP]
+_lib.tensor2d_sigmoid.restype,     _lib.tensor2d_sigmoid.argtypes      = _TP,  [_TP]
+
+_lib.tensor2d_add_broadcast.restype, _lib.tensor2d_add_broadcast.argtypes = _TP, [_TP, _TP, ctypes.c_double]
 
 class tensor2d:
     """A 2-D matrix backed by the C tensor2d library."""
@@ -89,27 +101,104 @@ class tensor2d:
         return tensor2d._from_ptr(ptr)
 
     def __iadd__(self, other):
+        if isinstance(other, (int, float)):
+            raise NotImplementedError("inplace tensor2d addition only supports other tensor2d objects")
+        
         _lib.tensor2d_add_inplace(self._p, other._p, 1.0)
         return self
     
     def __isub__(self, other):
+        if isinstance(other, (int, float)):
+            raise NotImplementedError("inplace tensor2d subtraction only supports other tensor2d objects")
+
         _lib.tensor2d_add_inplace(self._p, other._p, -1.0)
         return self
 
+    def can_broadcast(self, other):
+        """Can you broadcast other to self?"""
+        return self.shape[1] == other.shape[1] and other.shape[0] == 1
+
     def __add__(self, other):
-        ptr = _lib.tensor2d_add(self._p, other._p)
+        if isinstance(other, (int, float)):
+            ptr = _lib.tensor2d_scalar_add(self._p, float(other))
+            return tensor2d._from_ptr(ptr)
+
+        if self.can_broadcast(other):
+            ptr = _lib.tensor2d_add_broadcast(self._p, other._p, 1.0)
+        else:
+            ptr = _lib.tensor2d_add(self._p, other._p)
+    
         if not ptr:
             raise ValueError(f"add: incompatible shapes {self.shape} and {other.shape}")
         return tensor2d._from_ptr(ptr)
+    
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __neg__(self):
+        ptr = _lib.tensor2d_scalar_mul(self._p, -1.0)
+        return tensor2d._from_ptr(ptr)
 
     def __sub__(self, other):
-        ptr = _lib.tensor2d_sub(self._p, other._p)
+        if isinstance(other, (int, float)):
+            ptr = _lib.tensor2d_scalar_add(self._p, -float(other))
+            return tensor2d._from_ptr(ptr)
+
+        if self.can_broadcast(other):
+            ptr = _lib.tensor2d_add_broadcast(self._p, other._p, 1.0)
+        else:
+            ptr = _lib.tensor2d_add(self._p, other._p)
+            
         if not ptr:
             raise ValueError(f"sub: incompatible shapes {self.shape} and {other.shape}")
         return tensor2d._from_ptr(ptr)
 
-    def __mul__(self, scalar):
-        return tensor2d._from_ptr(_lib.tensor2d_scalar_mul(self._p, float(scalar)))
+
+    def __rsub__(self, other):
+        return (-self).__add__(other)
+
+    def __mul__(self, other):
+        if isinstance(other, (int, float)):
+            ptr = _lib.tensor2d_scalar_mul(self._p, float(other))
+            return tensor2d._from_ptr(ptr)
+
+        ptr = _lib.tensor2d_elwise_mul(self._p, other._p)
+        if not ptr:
+            raise ValueError(f"elementwise mul: incompatible shapes {self.shape} and {other.shape}")
+        return tensor2d._from_ptr(ptr)
+
+
+    def __truediv__(self, other):
+        if isinstance(other, (int, float)):
+            ptr = _lib.tensor2d_scalar_mul(self._p, 1.0 / float(other))
+            return tensor2d._from_ptr(ptr)
+    
+        ptr = _lib.tensor2d_elwise_div(self._p, other._p)
+        if not ptr:
+            raise ValueError(f"elementwise div: incompatible shapes {self.shape} and {other.shape}")
+        return tensor2d._from_ptr(ptr)
+    
+    
+    def __itruediv__(self, other):
+        if isinstance(other, (int, float)):
+            ptr = _lib.tensor2d_scalar_mul(self._p, 1.0 / float(other))
+            return tensor2d._from_ptr(ptr)
+
+        raise NotImplementedError("inplace tensor2d division only supports scalar divisors")
+    
+
+    def __pow__(self, other):
+        if isinstance(other, (int, float)):
+            # sqrt special case
+            if other == 0.5:
+                ptr = _lib.tensor2d_sqrt(self._p)
+                return tensor2d._from_ptr(ptr)
+            
+            ptr = _lib.tensor2d_pow(self._p, float(other))
+            return tensor2d._from_ptr(ptr)
+
+        raise NotImplementedError("tensor2d only supports scalar exponents")
+    
 
     def __rmul__(self, scalar):
         return self.__mul__(scalar)
@@ -155,3 +244,11 @@ class tensor2d:
 
         return "tensor2d([\n  " + ",\n  ".join(rows) + "\n])"
         
+    
+    def relu(self):
+        ptr = _lib.tensor2d_relu(self._p)
+        return tensor2d._from_ptr(ptr)
+
+    def sigmoid(self):
+        ptr = _lib.tensor2d_sigmoid(self._p)
+        return tensor2d._from_ptr(ptr)
