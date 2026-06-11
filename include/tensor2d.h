@@ -38,6 +38,8 @@ void tensor2d_add_inplace(Tensor2D* A, const Tensor2D* B, double scalar);
 
 Tensor2D* tensor2d_scalar_add(Tensor2D* A, double scalar);
 Tensor2D* tensor2d_scalar_mul(Tensor2D* A, double scalar);
+
+void tensor2d_scalar_add_inplace(Tensor2D* A, double scalar, int sign);
 void tensor2d_scalar_mul_inplace(Tensor2D* A, double scalar);
 Tensor2D* tensor2d_sqrt(Tensor2D* A);
 Tensor2D* tensor2d_pow(Tensor2D* A, double exponent);

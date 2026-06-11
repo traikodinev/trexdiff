@@ -124,6 +124,11 @@ void tensor2d_scalar_mul_inplace(Tensor2D* A, double scalar) {
         A->matrix[i] *= scalar;
 }
 
+void tensor2d_scalar_add_inplace(Tensor2D* A, double scalar, int sign) {
+    for (size_t i = 0; i < A->M * A->N; ++ i)
+        A->matrix[i] += sign * scalar;
+}
+
 // inplace operations
 void tensor2d_add_inplace(Tensor2D* A, const Tensor2D* B, double scalar) {
     if (A->M != B->M || A->N != B->N) {

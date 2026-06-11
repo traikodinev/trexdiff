@@ -263,6 +263,30 @@ static char *test_matrix_linear(void) {
 }
 
 
+static char *test_tensor_scalar_math(void) {
+    double w_data[] = {0.5, 1.0};
+    double x_data[] = {2.0, 3.0};
+
+    Node *W    = init(tensor2d_from_array(1, 2, w_data));
+    Node *x    = init(tensor2d_from_array(2, 1, x_data));
+
+    Node *W_scaled = combine_scalar(W, 2.0, OP_SCALAR_ADD);
+    Node *x_scaled = combine_scalar(x, 3.0, OP_SCALAR_MUL);
+
+    Node *loss = mul(W_scaled, x_scaled);
+
+    forward(loss);
+    backward(loss, tensor2d_ones(1, 1));
+
+    mu_assert_is_scalar("matmul_backward: loss is 1x1", loss->val);
+    mu_assert_tensor_close("matmul_backward: dW", W->grad, finite_diff(W, loss));
+    mu_assert_tensor_close("matmul_backward: dx", x->grad, finite_diff(x, loss));
+
+    free_node(loss);
+    return 0;
+}
+
+
 // Runner
 static char *all_tests(void) {
     mu_run_test(test_forward);
@@ -274,6 +298,7 @@ static char *all_tests(void) {
     mu_run_test(test_matmul_forward);
     mu_run_test(test_matmul_backward);
     mu_run_test(test_matrix_linear);
+    mu_run_test(test_tensor_scalar_math);
     return 0;
 }
 

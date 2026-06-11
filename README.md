@@ -20,20 +20,30 @@ This branch is still under development.
 
 
 ```py
-g = Node(tensor2d([[9.81]]))
-dt = Node(tensor2d([[5e-2]]))
-p5 = Node(tensor2d([[0.5]]))
+g = 9.81
+dt = 1e-2
+p5 = 0.5
+
+T = 50
+
+x0 = [
+    Node(tensor2d([[0.0]])), # theta
+    Node(tensor2d([[0.0]])), # theta_dot
+]
+
+# m = 1.0
+# l = 1.0
 
 def f(x, dx, u, dt):
     # pendulum forward dynamics
     # we don't support indexing, so have to use x/dx
     # x - theta, dx - theta_dot
     
-    theta_ddot = u - g @ sin(x)
+    theta_ddot = u - g * sin(x)
 
     # implicit Euler
-    x_new = x + dx @ dt + p5 @ theta_ddot @ dt @ dt
-    dx_new = dx + theta_ddot @ dt
+    x_new = x + dx * dt + theta_ddot * (0.5 * dt ** 2)
+    dx_new = dx + theta_ddot * dt
     return x_new, dx_new
 
 xs = [x0]
@@ -47,10 +57,16 @@ for i in range(T):
 
 
 # loss is squared distance to upright position at final time step
+#   plus control cost, relu'd at the limit
 target = Node(tensor2d([[np.pi]]))
-Qf = Node(tensor2d([[1e5]]))
+Qf = 1e5
+U_LIM = 50.0
 
-loss = Qf @ (xs[-1][0] - target) @ (xs[-1][0] - target) + Qf @ (xs[-1][1] @ xs[-1][1])
+loss = Qf * (xs[-1][0] - target) * (xs[-1][0] - target) + Qf * (xs[-1][1] * xs[-1][1])
+
+for u in us:
+    loss = loss + 1e0 * relu(u * u - U_LIM * U_LIM)
+
 ```
 
 ![Pendulum optimal control animation](examples/figures/pendulum.gif)

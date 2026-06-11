@@ -39,12 +39,15 @@ _lib.zerograd.restype,    _lib.zerograd.argtypes    = None,               [_P]
 _lib.free_node.restype,   _lib.free_node.argtypes   = None,               [_P]
 _lib.free_node_shallow.restype,   _lib.free_node_shallow.argtypes = None, [_P]
 _lib.finite_diff.restype, _lib.finite_diff.argtypes = _P_T2D,             [_P, _P]
+_lib.combine_scalar.restype, _lib.combine_scalar.argtypes = _P, [_P, ctypes.c_double, ctypes.c_int]
+
 
 
 class Node:
     _OP_ADD, _OP_SUB, _OP_MUL, _OP_DIV, _OP_RELU, _OP_SIG, _OP_LN, _OP_TRANSPOSE = 1, 2, 3, 4, 5, 6, 7, 8
     _OP_BROADCAST_ADD, _OP_BROADCAST_SUB = 9, 10
     _OP_SIN, _OP_COS = 11, 12
+    _OP_SCALAR_ADD, _OP_SCALAR_MUL = 13, 14
 
     def __init__(self, tensor=None, size=None):
         if size is not None and tensor is not None:
@@ -64,6 +67,16 @@ class Node:
     def __del__(self):
         _lib.free_node(self._p)
 
+
+    def _combine_scalar(self, scalar, op):
+        n = Node.__new__(Node)
+        n._p = _lib.combine_scalar(self._p, scalar, op)
+        n._inputs = (self,)
+        n.val = tensor2d._from_ptr(n._p.contents.val, owned=False)  # freed by free_node
+        n.grad = tensor2d._from_ptr(n._p.contents.grad, owned=False)  # freed by free_node
+        return n
+    
+
     def _combine(self, other, op):
         n = Node.__new__(Node)
         n._p = _lib.combine(self._p, other._p, op)
@@ -73,19 +86,40 @@ class Node:
         return n
 
     def __add__(self, other):
+        if isinstance(other, (int, float)):
+            return self._combine_scalar(float(other), Node._OP_SCALAR_ADD)
+        
         if self.val.can_broadcast(other.val):
             return self._combine(other, Node._OP_BROADCAST_ADD)
         return self._combine(other, Node._OP_ADD)
     
     def __sub__(self, other):
+        if isinstance(other, (int, float)):
+            return self._combine_scalar(-float(other), Node._OP_SCALAR_ADD)
+
         if self.val.can_broadcast(other.val):
             return self._combine(other, Node._OP_BROADCAST_SUB)
         return self._combine(other, Node._OP_SUB)
     
     
-    def __mul__(self, other): return self._combine(other, Node._OP_MUL)
+    def __mul__(self, other):
+        if isinstance(other, (int, float)):
+            return self._combine_scalar(float(other), Node._OP_SCALAR_MUL)
+
+        return self._combine(other, Node._OP_MUL)
+    
+    def __rmul__(self, other):
+        if isinstance(other, (int, float)):
+            return self._combine_scalar(float(other), Node._OP_SCALAR_MUL)
+        raise NotImplementedError("Right multiplication only supported for scalars")
+    
+    
     def __matmul__(self, other): return self._combine(other, Node._OP_MUL)  # alias for matmul
-    def __truediv__(self, other): return self._combine(other, Node._OP_DIV)
+    def __truediv__(self, other):
+        if isinstance(other, (int, float)):
+            return self._combine_scalar(1.0 / float(other), Node._OP_SCALAR_MUL)
+
+        return self._combine(other, Node._OP_DIV)
 
     @property
     def T(self):

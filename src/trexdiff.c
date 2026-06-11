@@ -16,6 +16,7 @@ Node* init(Tensor2D* val) {
     node->partial = tensor2d_zeros(val->M, val->N);
     node->op_type = OP_NOOP;
     node->visited = false;
+    node->scalar = 0.0;
 
     return node;
 }
@@ -47,7 +48,6 @@ void free_node(Node *n) {
 
 
 Node* combine(Node* a, Node* b, OpType op_type) {
-
     // todo: this is ugly, we should change combine (?)
     //  work out best API for this
     size_t outM = a->val->M;
@@ -142,6 +142,23 @@ Node* combine(Node* a, Node* b, OpType op_type) {
 }
 
 
+Node* combine_scalar(Node* a, double scalar, OpType op_type) {
+    if (op_type != OP_SCALAR_ADD && op_type != OP_SCALAR_MUL) {
+        fprintf(stderr, "[WARNING] combine_scalar: invalid op_type for scalar combination\n");
+        return NULL;
+    }
+
+    Node* node = init(tensor2d_zeros(a->val->M, a->val->N));
+    node->input_count = 1;
+    node->inputs = malloc(sizeof(Node*));
+    node->inputs[0] = a;
+    node->op_type = op_type;
+    node->scalar = scalar;
+
+    return node;
+}
+
+
 Node* transform(Node *a, OpType op_type) {
     Node* node = init(tensor2d_zeros(a->val->M, a->val->N));
     node->input_count = 1;
@@ -164,40 +181,73 @@ Node* transpose(Node* a) {
 }
 
 
-void reset_visited(Node *z) {
-    z->visited = false;
-
-    if (z -> input_count == 0)
+static void _topo_sort(Node *z, NodeArray* topo_graph) {
+    // TODO: cycle detection
+    if (z->visited)
         return;
 
-    for (unsigned short i = 0; i < z->input_count; ++ i)
-        reset_visited(z->inputs[i]);
+    if (z->input_count > 0) {
+        for (unsigned short i = 0; i < z->input_count; ++ i)
+            _topo_sort(z->inputs[i], topo_graph);
+    }
+
+    z->visited = true;
+    topo_graph->graph[topo_graph->size++] = z;
 }
 
 
-int reset_and_count(Node *z) {
-    // TODO: This is not an exact node count due to multiple visits 
-    z->visited = false;
-
-    if (z->input_count == 0)
-        return 1;
+static size_t count_unique(Node *z) {
+    if (z->visited) return 0;
+    z->visited = true;
 
     size_t count = 1;
     for (unsigned short i = 0; i < z->input_count; ++ i)
-        count += reset_and_count(z->inputs[i]);
-
+        count += count_unique(z->inputs[i]);
+    
     return count;
 }
 
 
-void zerograd(Node *z) {
-    tensor2d_set_zeros(z->grad);
-
-    if (z -> input_count == 0)
-        return;
+static inline void _reset_all_true(Node *z) {
+    // resets all nodes -> this only works if all are visited
+    if (!z->visited) return;
+    z->visited = false;
 
     for (unsigned short i = 0; i < z->input_count; ++ i)
-        zerograd(z->inputs[i]);
+        _reset_all_true(z->inputs[i]);
+}
+
+
+size_t reset_and_count(Node *z) {
+    size_t count = count_unique(z);
+    _reset_all_true(z);
+    return count;
+}
+
+
+static void _build_topo_graph(Node *z) {
+    size_t n_nodes = reset_and_count(z);
+    z->topo_graph = malloc(sizeof(NodeArray));
+    z->topo_graph->graph = malloc(sizeof(Node*) * n_nodes);
+    z->topo_graph->size = 0;
+
+    _topo_sort(z, z->topo_graph);
+}
+
+
+void reset_visited(Node *z) {
+    if (!z->topo_graph) _build_topo_graph(z);
+
+    for (size_t i = 0; i < z->topo_graph->size; ++i)
+        z->topo_graph->graph[i]->visited = false;
+}
+
+
+void zerograd(Node *z) {
+    if (!z->topo_graph) _build_topo_graph(z);
+
+    for (size_t i = 0; i < z->topo_graph->size; ++i)
+        tensor2d_set_zeros(z->topo_graph->graph[i]->grad);
 }
 
 
@@ -270,6 +320,16 @@ static void _forward(Node* z) {
             for (size_t i = 0; i < z->inputs[0]->val->M; ++i)
                 for (size_t j = 0; j < z->inputs[0]->val->N; ++j)
                     z->val->matrix[i * z->val->N + j] = z->inputs[0]->val->matrix[i * z->inputs[0]->val->N + j] + sign * z->inputs[1]->val->matrix[j];
+            break;
+        }
+        case OP_SCALAR_ADD:
+            // copy tensor and add inplace, this avoids creating a new tensor every time
+            memcpy(z->val->matrix, z->inputs[0]->val->matrix, z->inputs[0]->val->M * z->inputs[0]->val->N * sizeof(double));
+            tensor2d_scalar_add_inplace(z->val, z->scalar, 1.0);
+            break;
+        case OP_SCALAR_MUL: {
+            memcpy(z->val->matrix, z->inputs[0]->val->matrix, z->inputs[0]->val->M * z->inputs[0]->val->N * sizeof(double));
+            tensor2d_scalar_mul_inplace(z->val, z->scalar);
             break;
         }
         case OP_NOOP:
@@ -381,6 +441,15 @@ static inline void _backward(Node *start, Tensor2D* partial) {
                     z->inputs[1]->partial->matrix[j] += sign * col_sum;
                 }
                 break;
+            case OP_SCALAR_ADD:
+                // z->inputs[0]->partial += z->partial;
+                tensor2d_add_inplace(z->inputs[0]->partial, z->partial, 1.0);
+                break;
+            case OP_SCALAR_MUL:
+                // z->inputs[0]->partial += z->partial * z->scalar;
+                for (size_t i = 0; i < z->inputs[0]->val->M * z->inputs[0]->val->N; ++ i)
+                    z->inputs[0]->partial->matrix[i] += z->partial->matrix[i] * z->scalar;
+                break;
             case OP_NOOP:
             default:
                 // no-op
@@ -389,20 +458,6 @@ static inline void _backward(Node *start, Tensor2D* partial) {
     }
 }
 
-
-static void _topo_sort(Node *z, NodeArray* topo_graph) {
-    // TODO: cycle detection
-    if (z->visited)
-        return;
-
-    if (z->input_count > 0) {
-        for (unsigned short i = 0; i < z->input_count; ++ i)
-            _topo_sort(z->inputs[i], topo_graph);
-    }
-
-    z->visited = true;
-    topo_graph->graph[topo_graph->size++] = z;
-}
 
 
 int backward(Node *z, Tensor2D* partial) {
@@ -421,12 +476,7 @@ int backward(Node *z, Tensor2D* partial) {
 
     // TODO: We can optimize this by allowing calls to e.g. `compile`, a la Pytorch
     //  instead of manually computing the topological sorting
-    size_t n_nodes = reset_and_count(z);
-    z->topo_graph = malloc(sizeof(NodeArray));
-    z->topo_graph->graph = malloc(sizeof(Node*) * n_nodes);
-    z->topo_graph->size = 0;
-
-    _topo_sort(z, z->topo_graph);
+    _build_topo_graph(z);
     _backward(z, partial);
 
     return 0;

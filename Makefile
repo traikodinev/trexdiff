@@ -1,5 +1,5 @@
 CC      = gcc
-CFLAGS  = -std=c11 -Wall -Wextra -Wpedantic -O2 -g -Iinclude
+CFLAGS  = -std=c11 -Wall -Wextra -Wpedantic -O2 -g -Iinclude -ftree-vectorize -ffast-math -fassociative-math -msse2
 LDFLAGS = -lm -lblas
 
 BUILD    = build

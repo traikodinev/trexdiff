@@ -19,7 +19,9 @@ typedef enum {
     OP_BROADCAST_ADD,
     OP_BROADCAST_SUB,
     OP_SIN,
-    OP_COS
+    OP_COS,
+    OP_SCALAR_ADD,
+    OP_SCALAR_MUL
 } OpType;
 
 
@@ -38,6 +40,7 @@ struct Node {
     Tensor2D* grad; // dL/d_Node
     Tensor2D* partial; // partial accumulated in the current backward pass
                     // this lets us call .backward multiple times to accumulate losses
+    double scalar;  // for tensor-scalar ops
 
     bool visited; // node visted (in a pass regardless of direction)
     NodeArray* topo_graph;
@@ -51,6 +54,7 @@ struct Node {
 
 Node* init(Tensor2D* val);
 Node* combine(Node* a, Node* b, OpType op_type);
+Node* combine_scalar(Node* a, double scalar, OpType op_type);
 
 // TODO: better representation of functionals
 Node *transform(Node *a, OpType op_type);
@@ -92,7 +96,7 @@ Node* transpose(Node* a);
 void free_node(Node *n);
 void free_node_shallow(Node *n);
 void reset_visited(Node *z);
-int reset_and_count(Node *z);
+size_t reset_and_count(Node *z);
 
 void zerograd(Node *z);
 void forward(Node *z);
