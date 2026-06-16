@@ -18,59 +18,53 @@ This branch is still under development.
 
 ## Pendulum Optimal Control
 
+![Pendulum optimal control animation](examples/figures/pendulum.gif)
 
 ```py
-g = 9.81
-dt = 1e-2
-p5 = 0.5
-
+# time horizon -> how many timesteps
 T = 50
 
+# difference btwn. timesteps
+dt = 1e-1
+
+# gravity
+g = 9.81
+
 x0 = [
-    Node(tensor2d([[0.0]])), # theta
-    Node(tensor2d([[0.0]])), # theta_dot
+    Node(tensor2d([[0.0]])),
+    Node(tensor2d([[0.0]]))
 ]
 
-# m = 1.0
-# l = 1.0
+def f(x, u, dt):
+    """x_t+1 given x_t, u_t"""
 
-def f(x, dx, u, dt):
-    # pendulum forward dynamics
-    # we don't support indexing, so have to use x/dx
-    # x - theta, dx - theta_dot
-    
-    theta_ddot = u - g * sin(x)
+    a = u - g * sin(x[0])
+    theta_dot_new = x[1] + dt * a
+    theta_new = x[0] + theta_dot_new * dt
 
-    # implicit Euler
-    x_new = x + dx * dt + theta_ddot * (0.5 * dt ** 2)
-    dx_new = dx + theta_ddot * dt
-    return x_new, dx_new
+    # new state
+    return [theta_new, theta_dot_new]
+
 
 xs = [x0]
 us = []
-for i in range(T):
-    u = Node(tensor2d([[0.0]]))
+
+for t in range(T):
+    u_val = 2.0
+    u = Node(tensor2d([[u_val]]))
     us.append(u)
 
-    x_new, dx_new = f(xs[-1][0], xs[-1][1], u, dt)
-    xs.append((x_new, dx_new))
+    xs.append(f(xs[-1], u, dt))
 
+# loss
+U_LIM = 10
+Qf  = 1e4
+loss = Qf * (cos(xs[-1][0]) + 1) + Qf * (xs[-1][1] * xs[-1][1])
 
-# loss is squared distance to upright position at final time step
-#   plus control cost, relu'd at the limit
-target = Node(tensor2d([[np.pi]]))
-Qf = 1e5
-U_LIM = 50.0
-
-loss = Qf * (xs[-1][0] - target) * (xs[-1][0] - target) + Qf * (xs[-1][1] * xs[-1][1])
-
+# control cost
 for u in us:
-    loss = loss + 1e0 * relu(u * u - U_LIM * U_LIM)
-
+    loss += 1e-1 * u * u
 ```
-
-![Pendulum optimal control animation](examples/figures/pendulum.gif)
-
 
 ### Neural Net Classification
 
