@@ -119,6 +119,9 @@ class tensor2d:
 
     def can_broadcast(self, other):
         """Can you broadcast other to self?"""
+        if self.shape[0] == other.shape[0] and self.shape[1] == other.shape[1]:
+            return False
+        
         return self.shape[1] == other.shape[1] and other.shape[0] == 1
 
     def __add__(self, other):
@@ -150,7 +153,7 @@ class tensor2d:
         if self.can_broadcast(other):
             ptr = _lib.tensor2d_add_broadcast(self._p, other._p, 1.0)
         else:
-            ptr = _lib.tensor2d_add(self._p, other._p)
+            ptr = _lib.tensor2d_sub(self._p, other._p)
             
         if not ptr:
             raise ValueError(f"sub: incompatible shapes {self.shape} and {other.shape}")
