@@ -51,7 +51,15 @@ Node* combine(Node* a, Node* b, OpType op_type) {
     // todo: this is ugly, we should change combine (?)
     //  work out best API for this
     size_t outM = a->val->M;
-    size_t outN = (op_type == OP_MUL) ? b->val->N : a->val->N;
+    size_t outN;
+    if (op_type == OP_MUL)
+        outN = b->val->N;
+    else if (op_type == OP_CATEGORICAL_CROSS_ENTROPY) {
+        outM = 1;
+        outN = 1;
+    }
+    else outN = a->val->N;
+
     Node* node = init(tensor2d_zeros(outM, outN));
     
     // adding 2 nodes means 2 inputs
@@ -131,6 +139,21 @@ Node* combine(Node* a, Node* b, OpType op_type) {
             node->grad->N = a->val->N;
             node->partial->M = a->val->M;
             node->partial->N = a->val->N;
+            break;
+        case OP_CATEGORICAL_CROSS_ENTROPY:
+            if (a->val->M != b->val->M || a->val->N != b->val->N) {
+                fprintf(
+                    stderr,
+                    "[WARNING] combine: incompatible dims for categorical cross entropy, %zux%zu and %zux%zu, expected matching Nx1 tensors\n",
+                    a->val->M, a->val->N, b->val->M, b->val->N
+                );
+            }
+            node->val->M = 1;
+            node->val->N = 1;
+            node->grad->M = 1;
+            node->grad->N = 1;
+            node->partial->M = 1;
+            node->partial->N = 1;
             break;
         default:
             break;
@@ -332,6 +355,49 @@ static void _forward(Node* z) {
             tensor2d_scalar_mul_inplace(z->val, z->scalar);
             break;
         }
+        case OP_CATEGORICAL_CROSS_ENTROPY: {
+            // inputs[0] is logits, inputs[1] is target
+            // M - rows - number of data points, N - columns - number of classes
+            // average cross entropy loss over all data points
+            Tensor2D *logits = z->inputs[0]->val;
+            Tensor2D *target = z->inputs[1]->val;
+
+            size_t M = logits->M; // rows: data points
+            size_t N = logits->N; // cols: classes
+
+            // vectorized
+            {
+                double sum_log_sum_exp = 0.0;
+
+                for (size_t m = 0; m < M; ++m) {
+                    double max_val = logits->matrix[m * N];
+
+                    for (size_t c = 1; c < N; ++c) {
+                        double v = logits->matrix[m * N + c];
+                        if (v > max_val) {
+                            max_val = v;
+                        }
+                    }
+
+                    double sum_exp = 0.0;
+                    for (size_t c = 0; c < N; ++c) {
+                        sum_exp += exp(logits->matrix[m * N + c] - max_val);
+                    }
+
+                    sum_log_sum_exp += max_val + log(sum_exp);
+                }
+
+                double target_dot_logits = cblas_ddot(
+                    (int)(M * N),
+                    target->matrix, 1,
+                    logits->matrix, 1
+                );
+
+                z->val->matrix[0] = (sum_log_sum_exp - target_dot_logits) / (double)M;
+            }
+
+            break;
+        }
         case OP_NOOP:
         default:
             // no-op by default
@@ -450,6 +516,64 @@ static inline void _backward(Node *start, Tensor2D* partial) {
                 for (size_t i = 0; i < z->inputs[0]->val->M * z->inputs[0]->val->N; ++ i)
                     z->inputs[0]->partial->matrix[i] += z->partial->matrix[i] * z->scalar;
                 break;
+
+            case OP_CATEGORICAL_CROSS_ENTROPY: {
+                Tensor2D *logits = z->inputs[0]->val;
+                Tensor2D *target = z->inputs[1]->val;
+
+                Tensor2D *d_logits = z->inputs[0]->partial;
+                Tensor2D *d_target = z->inputs[1]->partial;
+
+                size_t M = logits->M;
+                size_t N = logits->N;
+                size_t total = M * N;
+
+                double upstream = z->partial->matrix[0];
+                double scale = upstream / (double)M;
+
+                double *probs = malloc(total * sizeof(double));
+                double *log_probs = malloc(total * sizeof(double));
+
+                for (size_t m = 0; m < M; ++m) {
+                    size_t row = m * N;
+
+                    double max_val = logits->matrix[row];
+
+                    for (size_t c = 1; c < N; ++c) {
+                        double v = logits->matrix[row + c];
+                        if (v > max_val) {
+                            max_val = v;
+                        }
+                    }
+
+                    double sum_exp = 0.0;
+
+                    for (size_t c = 0; c < N; ++c) {
+                        double e = exp(logits->matrix[row + c] - max_val);
+                        probs[row + c] = e;
+                        sum_exp += e;
+                    }
+
+                    double log_sum_exp = max_val + log(sum_exp);
+
+                    for (size_t c = 0; c < N; ++c) {
+                        probs[row + c] /= sum_exp;
+                        log_probs[row + c] = logits->matrix[row + c] - log_sum_exp;
+                    }
+                }
+
+                // probs = probs - target
+                cblas_daxpy((int)total, -1.0, target->matrix, 1, probs, 1);
+                // d_logits += scale * probs
+                cblas_daxpy((int)total, scale, probs, 1, d_logits->matrix, 1);
+                // d_target += -scale * log_probs
+                cblas_daxpy((int)total, -scale, log_probs, 1, d_target->matrix, 1);
+
+                free(probs);
+                free(log_probs);
+
+                break;
+            }
             case OP_NOOP:
             default:
                 // no-op

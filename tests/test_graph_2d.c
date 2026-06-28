@@ -433,6 +433,88 @@ static char *test_trig(void) {
     return 0;
 }
 
+static char *test_categorical_cross_entropy(void) {
+    double logits_data[] = {1.0, 2.0, 0.5};
+    double target_data[] = {0.0, 1.0, 0.0};
+
+    // Shape: 1 sample x 3 classes
+    Node *logits = init(tensor2d_from_array(1, 3, logits_data));
+    Node *target = init(tensor2d_from_array(1, 3, target_data));
+    Node *loss = categorical_cross_entropy(logits, target);
+
+    forward(loss);
+    backward(loss, tensor2d_ones(1, 1));
+
+    double max_logit = 2.0;
+    double log_sum_exp = max_logit
+        + log(exp(1.0 - max_logit) + exp(2.0 - max_logit) + exp(0.5 - max_logit));
+    double expected = log_sum_exp - 2.0;
+
+    mu_assert_is_scalar("categorical_cross_entropy: loss is 1x1", loss->val);
+    mu_assert_tensor_close_scalar("categorical_cross_entropy: forward", loss->val, expected);
+    mu_assert_tensor_close("categorical_cross_entropy: dlogits", logits->grad, finite_diff(logits, loss));
+
+    free_node(loss);
+    return 0;
+}
+
+static char *test_categorical_cross_entropy_batched(void) {
+    // Shape: 3 samples x 2 classes
+    double logits_data[] = {
+        1.0, 2.0,
+        0.5, -1.0,
+        3.0, 0.0
+    };
+
+    double target_data[] = {
+        0.0, 1.0,  // class 1
+        1.0, 0.0,  // class 0
+        1.0, 0.0   // class 0
+    };
+
+    Node *logits = init(tensor2d_from_array(3, 2, logits_data));
+    Node *target = init(tensor2d_from_array(3, 2, target_data));
+    Node *loss = categorical_cross_entropy(logits, target);
+
+    forward(loss);
+    backward(loss, tensor2d_ones(1, 1));
+
+    double expected = 0.0;
+
+    // sample 0: logits [1.0, 2.0], target class 1
+    {
+        double max_logit = 2.0;
+        double log_sum_exp = max_logit
+            + log(exp(1.0 - max_logit) + exp(2.0 - max_logit));
+        expected += log_sum_exp - 2.0;
+    }
+
+    // sample 1: logits [0.5, -1.0], target class 0
+    {
+        double max_logit = 0.5;
+        double log_sum_exp = max_logit
+            + log(exp(0.5 - max_logit) + exp(-1.0 - max_logit));
+        expected += log_sum_exp - 0.5;
+    }
+
+    // sample 2: logits [3.0, 0.0], target class 0
+    {
+        double max_logit = 3.0;
+        double log_sum_exp = max_logit
+            + log(exp(3.0 - max_logit) + exp(0.0 - max_logit));
+        expected += log_sum_exp - 3.0;
+    }
+
+    expected /= 3.0;
+
+    mu_assert_is_scalar("categorical_cross_entropy_batched: loss is 1x1", loss->val);
+    mu_assert_tensor_close_scalar("categorical_cross_entropy_batched: forward", loss->val, expected);
+    mu_assert_tensor_close("categorical_cross_entropy_batched: dlogits", logits->grad, finite_diff(logits, loss));
+
+    free_node(loss);
+    return 0;
+}
+
 
 // Runner
 static char *all_tests(void) {
@@ -452,6 +534,8 @@ static char *all_tests(void) {
     mu_run_test(test_transpose);
     mu_run_test(test_broadcast);
     mu_run_test(test_trig);
+    mu_run_test(test_categorical_cross_entropy);
+    mu_run_test(test_categorical_cross_entropy_batched);
     return 0;
 }
 
@@ -465,4 +549,3 @@ int main(void) {
     printf("Tests run: %d\n", tests_run);
     return result != 0;
 }
-

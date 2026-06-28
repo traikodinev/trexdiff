@@ -21,7 +21,8 @@ typedef enum {
     OP_SIN,
     OP_COS,
     OP_SCALAR_ADD,
-    OP_SCALAR_MUL
+    OP_SCALAR_MUL,
+    OP_CATEGORICAL_CROSS_ENTROPY
 } OpType;
 
 
@@ -77,6 +78,10 @@ static inline Node* broadcast_add(Node* a, Node* b) {
 
 static inline Node* broadcast_sub(Node* a, Node* b) {
     return combine(a, b, OP_BROADCAST_SUB);
+}
+
+static inline Node* categorical_cross_entropy(Node* logits, Node* target) {
+    return combine(logits, target, OP_CATEGORICAL_CROSS_ENTROPY);
 }
 
 static inline Node* relu(Node* a) {

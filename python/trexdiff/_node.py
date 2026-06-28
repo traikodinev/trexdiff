@@ -48,6 +48,7 @@ class Node:
     _OP_BROADCAST_ADD, _OP_BROADCAST_SUB = 9, 10
     _OP_SIN, _OP_COS = 11, 12
     _OP_SCALAR_ADD, _OP_SCALAR_MUL = 13, 14
+    _OP_CATEGORICAL_CROSS_ENTROPY = 15
 
     def __init__(self, tensor=None, size=None):
         if size is not None and tensor is not None:
@@ -166,3 +167,10 @@ def cos(node):        return _transform(node, Node._OP_COS)
 
 def finite_diff(inp, target):
     return _lib.finite_diff(inp._p, target._p)
+
+# losses
+def categorical_cross_entropy(logits, targets):
+    if logits.val.shape[0] != targets.val.shape[0] or logits.val.shape[1] != targets.val.shape[1]:
+        raise ValueError(f"Incompatible dimensions for categorical cross entropy: logits {logits.val.shape[0]}x{logits.val.shape[1]}, targets {targets.val.shape[0]}x{targets.val.shape[1]}, expected matching MxN tensors")
+
+    return logits._combine(targets, Node._OP_CATEGORICAL_CROSS_ENTROPY)
