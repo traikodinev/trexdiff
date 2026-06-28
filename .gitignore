@@ -4,3 +4,6 @@ build/
 dist/
 *.egg-info/
 python/trexdiff/libtrexdiff.so
+.wip
+.ipynb_checkpoints
+.pytest_cache
