@@ -1,6 +1,14 @@
 CC      = gcc
 CFLAGS  = -std=c11 -Wall -Wextra -Wpedantic -O2 -g -Iinclude -ftree-vectorize -ffast-math -fassociative-math -msse2
-LDFLAGS = -lm -lblas
+
+# CPU BLAS by default
+LDFLAGS  = -lblas -lm
+
+# enable NVBLASwith:
+#   make USE_NVBLAS=1
+ifeq ($(USE_NVBLAS),1)
+	LDFLAGS  = -Wl,--no-as-needed -lnvblas -Wl,--as-needed -lcudart -lblas -lm
+endif
 
 BUILD    = build
 LIB_SRCS = src/trexdiff.c src/tensor2d.c
