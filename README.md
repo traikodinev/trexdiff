@@ -13,7 +13,8 @@ This branch is still under development.
 ## Examples
 
 - 2D-regression,see [examples/01_regression_gd.ipynb](examples/01_regression_gd.ipynb)
-- Neural Net classification [examples/02_nonlinear_classification.ipynb](examples/02_nonlinear_classification.ipynb)
+- 2D classification [examples/02_nonlinear_classification.ipynb](examples/02_nonlinear_classification.ipynb)
+- MNIST Digit Classification [examples/06_mnist_28x28.ipynb](examples/06_mnist_28x28.ipynb)
 - Pendulum Optimal Control [examples/04_optimal_control_pendulum.ipynb](examples/04_optimal_control_pendulum.ipynb)
 - Iterative Linear Quadratic Regulator [examples/05_iterative_linear_quadratic_regulator](examples/05_iterative_linear_quadratic_regulator.ipynb) - using eager evaluation
 
