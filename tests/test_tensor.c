@@ -64,6 +64,24 @@ static char *test_from_array(void) {
     return 0;
 }
 
+static char *test_copy_inplace(void) {
+    double src_data[] = {1.0, 2.0, 3.0, 4.0};
+    Tensor2D *src = tensor2d_from_array(2, 2, src_data);
+    Tensor2D *dst = tensor2d_zeros(2, 2);
+    Tensor2D *wrong_shape = tensor2d_zeros(1, 4);
+
+    mu_assert("copy_inplace: failed", tensor2d_copy_inplace(dst, src) == 0);
+    for (size_t i = 0; i < 4; ++i)
+        mu_assert_close("copy_inplace: value mismatch", dst->matrix[i], src_data[i]);
+    mu_assert("copy_inplace: accepted incompatible shape",
+              tensor2d_copy_inplace(dst, wrong_shape) != 0);
+
+    tensor2d_free(src);
+    tensor2d_free(dst);
+    tensor2d_free(wrong_shape);
+    return 0;
+}
+
 static char *test_transpose(void) {
     double data[] = {1, 2, 3, 4, 5, 6};
     Tensor2D *A   = tensor2d_from_array(2, 3, data);
@@ -169,6 +187,7 @@ static char *all_tests(void) {
     mu_run_test(test_zeros);
     mu_run_test(test_ones);
     mu_run_test(test_from_array);
+    mu_run_test(test_copy_inplace);
     mu_run_test(test_transpose);
     mu_run_test(test_add);
     mu_run_test(test_sub);

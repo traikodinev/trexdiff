@@ -16,6 +16,7 @@ _TP = ctypes.POINTER(_Tensor2D)
 _lib.tensor2d_from_array.restype,  _lib.tensor2d_from_array.argtypes  = _TP,  [ctypes.c_size_t, ctypes.c_size_t, ctypes.POINTER(ctypes.c_double)]
 _lib.tensor2d_zeros.restype,       _lib.tensor2d_zeros.argtypes        = _TP,  [ctypes.c_size_t, ctypes.c_size_t]
 _lib.tensor2d_ones.restype,        _lib.tensor2d_ones.argtypes         = _TP,  [ctypes.c_size_t, ctypes.c_size_t]
+_lib.tensor2d_copy_inplace.restype, _lib.tensor2d_copy_inplace.argtypes = ctypes.c_int, [_TP, _TP]
 _lib.tensor2d_free.restype,        _lib.tensor2d_free.argtypes         = None, [_TP]
 _lib.tensor2d_matmul.restype,      _lib.tensor2d_matmul.argtypes       = _TP,  [_TP, _TP]
 _lib.tensor2d_transpose.restype,   _lib.tensor2d_transpose.argtypes    = _TP,  [_TP]
@@ -85,6 +86,14 @@ class tensor2d:
     def __del__(self):
         if getattr(self, "_owned", True) and getattr(self, "_p", None):
             _lib.tensor2d_free(self._p)
+
+    def copy_from(self, other):
+        """Copy values from another tensor without replacing this tensor's buffer."""
+        if not isinstance(other, tensor2d):
+            raise TypeError("copy_from expects a tensor2d")
+        if _lib.tensor2d_copy_inplace(self._p, other._p) != 0:
+            raise ValueError(f"copy_from: incompatible shapes {self.shape} and {other.shape}")
+        return self
 
     # shape is just (M,N)
     @property

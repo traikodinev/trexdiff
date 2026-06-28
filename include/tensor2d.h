@@ -22,6 +22,7 @@ Tensor2D* tensor2d_from_array(size_t M, size_t N, double* matrix);
 Tensor2D* tensor2d_zeros(size_t M, size_t N);
 Tensor2D* tensor2d_ones(size_t M, size_t N);
 void tensor2d_set_zeros(Tensor2D* tensor);
+int tensor2d_copy_inplace(Tensor2D* dst, const Tensor2D* src);
 
 void tensor2d_free(Tensor2D* tensor);
 

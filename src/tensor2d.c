@@ -34,6 +34,17 @@ void tensor2d_set_zeros(Tensor2D* tensor) {
 }
 
 
+int tensor2d_copy_inplace(Tensor2D* dst, const Tensor2D* src) {
+    if (dst->M != src->M || dst->N != src->N)
+        return -1;
+    if (dst == src)
+        return 0;
+
+    memcpy(dst->matrix, src->matrix, dst->M * dst->N * sizeof(double));
+    return 0;
+}
+
+
 Tensor2D* tensor2d_ones(size_t M, size_t N) {
     Tensor2D* tensor = _init_tensor2d(M, N);
     
@@ -250,4 +261,3 @@ Tensor2D* tensor2d_add_broadcast(Tensor2D* A, Tensor2D* B, double scalar) {
     }
     return C;
 }
-
